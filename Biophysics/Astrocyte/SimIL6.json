@@ -1,0 +1,210 @@
+{
+    "Soma": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 1.0
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 1e-4,
+                "e_pas (mV)": -70.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "IL6": {
+            "PARAMETER": {
+                "lps_stim_IL6": 0,
+                "lps_sensitivity_IL6": 0.1,
+                "lps_threshold_IL6": 1.0,
+                "ca_threshold_IL6": 0.0001,
+                "ca_sensitivity_IL6": 2.0,
+                "basal_production_IL6": 0.01,
+                "max_production_IL6": 8.0,
+                "tau_production_IL6": 120,
+                "tau_decay_IL6": 400,
+                "tau_mrna_IL6": 60,
+                "il10_production_factor_IL6": 0.4,
+                "il10_decay_IL6": 0.004,
+                "tau_il10_IL6": 50,
+                "tnfa_activation_strength_IL6": 0.3,
+                "il1b_activation_strength_IL6": 0.4,
+                "il6_autocrine_hill_n_IL6": 2.0,
+                "il6_autocrine_k50_IL6": 5.0,
+                "il6r_expression_IL6": 1.0,
+                "gp130_expression_IL6": 1.2,
+                "il6r_kon_IL6": 0.015,
+                "il6r_koff_IL6": 0.005,
+                "gp130_kon_IL6": 0.02,
+                "gp130_koff_IL6": 0.002,
+                "stat3_activation_threshold_IL6": 0.1,
+                "stat3_decay_rate_IL6": 0.015,
+                "stat3_activation_rate_IL6": 0.06,
+                "translation_delay_factor_IL6": 0.1,
+                "secretion_rate_IL6": 0.04,
+                "g_il6_IL6": 0.00008,
+                "pca_IL6": 1.0,
+                "pna_IL6": 0.1,
+                "pk_IL6": 0.08
+            }
+        }
+    },
+    "Dendrites": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 1.0
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 1e-4,
+                "e_pas (mV)": -70.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "IL6": {
+            "PARAMETER": {
+                "lps_stim_IL6": 0,
+                "lps_sensitivity_IL6": 0.1,
+                "lps_threshold_IL6": 1.0,
+                "ca_threshold_IL6": 0.0001,
+                "ca_sensitivity_IL6": 2.0,
+                "basal_production_IL6": 0.01,
+                "max_production_IL6": 7.0,
+                "tau_production_IL6": 140,
+                "tau_decay_IL6": 400,
+                "tau_mrna_IL6": 70,
+                "il10_production_factor_IL6": 0.4,
+                "il10_decay_IL6": 0.004,
+                "tau_il10_IL6": 60,
+                "tnfa_activation_strength_IL6": 0.3,
+                "il1b_activation_strength_IL6": 0.4,
+                "il6_autocrine_hill_n_IL6": 2.0,
+                "il6_autocrine_k50_IL6": 5.0,
+                "il6r_expression_IL6": 0.9,
+                "gp130_expression_IL6": 1.1,
+                "il6r_kon_IL6": 0.015,
+                "il6r_koff_IL6": 0.005,
+                "gp130_kon_IL6": 0.02,
+                "gp130_koff_IL6": 0.002,
+                "stat3_activation_threshold_IL6": 0.1,
+                "stat3_decay_rate_IL6": 0.015,
+                "stat3_activation_rate_IL6": 0.06,
+                "translation_delay_factor_IL6": 0.1,
+                "secretion_rate_IL6": 0.04,
+                "g_il6_IL6": 0.00008,
+                "pca_IL6": 1.0,
+                "pna_IL6": 0.1,
+                "pk_IL6": 0.08
+            }
+        }
+    },
+    "Small Glia": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 0.8
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 1e-4,
+                "e_pas (mV)": -85.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "IL6": {
+            "PARAMETER": {
+                "lps_stim_IL6": 0,
+                "lps_sensitivity_IL6": 0.12,
+                "lps_threshold_IL6": 0.5,
+                "ca_threshold_IL6": 0.00005,
+                "ca_sensitivity_IL6": 2.3,
+                "basal_production_IL6": 0.03,
+                "max_production_IL6": 12.0,
+                "tau_production_IL6": 100,
+                "tau_decay_IL6": 350,
+                "tau_mrna_IL6": 50,
+                "il10_production_factor_IL6": 0.45,
+                "il10_decay_IL6": 0.005,
+                "tau_il10_IL6": 45,
+                "tnfa_activation_strength_IL6": 0.35,
+                "il1b_activation_strength_IL6": 0.45,
+                "il6_autocrine_hill_n_IL6": 2.1,
+                "il6_autocrine_k50_IL6": 4.5,
+                "il6r_expression_IL6": 1.1,
+                "gp130_expression_IL6": 1.3,
+                "il6r_kon_IL6": 0.017,
+                "il6r_koff_IL6": 0.004,
+                "gp130_kon_IL6": 0.022,
+                "gp130_koff_IL6": 0.0018,
+                "stat3_activation_threshold_IL6": 0.09,
+                "stat3_decay_rate_IL6": 0.013,
+                "stat3_activation_rate_IL6": 0.065,
+                "translation_delay_factor_IL6": 0.12,
+                "secretion_rate_IL6": 0.045,
+                "g_il6_IL6": 0.0001,
+                "pca_IL6": 1.0,
+                "pna_IL6": 0.1,
+                "pk_IL6": 0.08
+            }
+        }
+    },
+    "Large Glia": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 0.8
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 0.001,
+                "e_pas (mV)": -85.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "IL6": {
+            "PARAMETER": {
+                "lps_stim_IL6": 0,
+                "lps_sensitivity_IL6": 0.15,
+                "lps_threshold_IL6": 0.3,
+                "ca_threshold_IL6": 0.00003,
+                "ca_sensitivity_IL6": 2.5,
+                "basal_production_IL6": 0.05,
+                "max_production_IL6": 18.0,
+                "tau_production_IL6": 80,
+                "tau_decay_IL6": 300,
+                "tau_mrna_IL6": 40,
+                "il10_production_factor_IL6": 0.5,
+                "il10_decay_IL6": 0.006,
+                "tau_il10_IL6": 40,
+                "tnfa_activation_strength_IL6": 0.4,
+                "il1b_activation_strength_IL6": 0.5,
+                "il6_autocrine_hill_n_IL6": 2.3,
+                "il6_autocrine_k50_IL6": 4.0,
+                "il6r_expression_IL6": 1.3,
+                "gp130_expression_IL6": 1.5,
+                "il6r_kon_IL6": 0.02,
+                "il6r_koff_IL6": 0.003,
+                "gp130_kon_IL6": 0.025,
+                "gp130_koff_IL6": 0.0015,
+                "stat3_activation_threshold_IL6": 0.08,
+                "stat3_decay_rate_IL6": 0.012,
+                "stat3_activation_rate_IL6": 0.07,
+                "translation_delay_factor_IL6": 0.15,
+                "secretion_rate_IL6": 0.05,
+                "g_il6_IL6": 0.00012,
+                "pca_IL6": 1.0,
+                "pna_IL6": 0.1,
+                "pk_IL6": 0.08
+            }
+        }
+    }
+}

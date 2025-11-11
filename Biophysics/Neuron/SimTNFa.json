@@ -1,0 +1,142 @@
+{
+    "Soma": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 0.8
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 8.968609865470852e-05,
+                "e_pas (mV)": -70.0
+            }
+        },
+        "ca_ion": {},
+        "tnfa": {
+            "PARAMETER": {
+                "k_lps_tlr4_tnfa": 0.01,
+                "k_tlr4_unbind_tnfa": 0.001,
+                "k_tlr4_ikk_tnfa": 0.005,
+                "k_ikk_deact_tnfa": 0.002,
+                "k_ikk_ikb_tnfa": 0.008,
+                "k_ikb_degrade_tnfa": 0.01,
+                "k_ikb_synth_tnfa": 0.0005,
+                "k_nfkb_trans_tnfa": 0.02,
+                "k_nfkb_export_tnfa": 0.001,
+                "k_transcription_tnfa": 0.005,
+                "k_translation_tnfa": 0.01,
+                "k_mRNA_degrade_tnfa": 0.001,
+                "k_tnfa_release_tnfa": 0.002,
+                "k_tnfa_degrade_tnfa": 0.0001,
+                "ca_threshold_tnfa": 0.0005,
+                "ca_hill_tnfa": 2,
+                "density_tnfa": 1e12
+            }
+        }
+    },
+    "Dendrites": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 0.8
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 8.968609865470852e-05,
+                "e_pas (mV)": -70.0
+            }
+        },
+        "ca_ion": {},
+        "tnfa": {
+            "PARAMETER": {
+                "k_lps_tlr4_tnfa": 0.005,
+                "k_tlr4_unbind_tnfa": 0.001,
+                "k_tlr4_ikk_tnfa": 0.003,
+                "k_ikk_deact_tnfa": 0.002,
+                "k_ikk_ikb_tnfa": 0.005,
+                "k_ikb_degrade_tnfa": 0.01,
+                "k_ikb_synth_tnfa": 0.0003,
+                "k_nfkb_trans_tnfa": 0.01,
+                "k_nfkb_export_tnfa": 0.001,
+                "k_transcription_tnfa": 0.003,
+                "k_translation_tnfa": 0.008,
+                "k_mRNA_degrade_tnfa": 0.001,
+                "k_tnfa_release_tnfa": 0.001,
+                "k_tnfa_degrade_tnfa": 0.0001,
+                "ca_threshold_tnfa": 0.0005,
+                "ca_hill_tnfa": 2,
+                "density_tnfa": 5e11
+            }
+        }
+    },
+    "Small Glia": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 0.8
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 1e-4,
+                "e_pas (mV)": -85.0
+            }
+        },
+        "ca_ion": {},
+        "tnfa": {
+            "PARAMETER": {
+                "k_lps_tlr4_tnfa": 0.01,
+                "k_tlr4_unbind_tnfa": 0.001,
+                "k_tlr4_ikk_tnfa": 0.005,
+                "k_ikk_deact_tnfa": 0.002,
+                "k_ikk_ikb_tnfa": 0.008,
+                "k_ikb_degrade_tnfa": 0.01,
+                "k_ikb_synth_tnfa": 0.0005,
+                "k_nfkb_trans_tnfa": 0.02,
+                "k_nfkb_export_tnfa": 0.001,
+                "k_transcription_tnfa": 0.005,
+                "k_translation_tnfa": 0.01,
+                "k_mRNA_degrade_tnfa": 0.001,
+                "k_tnfa_release_tnfa": 0.002,
+                "k_tnfa_degrade_tnfa": 0.0001,
+                "ca_threshold_tnfa": 0.0005,
+                "ca_hill_tnfa": 2,
+                "density_tnfa": 1e12
+            }
+        }
+    },
+    "Large Glia": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 0.8
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 0.001,
+                "e_pas (mV)": -85.0
+            }
+        },
+        "ca_ion": {},
+        "tnfa": {
+            "PARAMETER": {
+                "k_lps_tlr4_tnfa": 0.01,
+                "k_tlr4_unbind_tnfa": 0.001,
+                "k_tlr4_ikk_tnfa": 0.005,
+                "k_ikk_deact_tnfa": 0.002,
+                "k_ikk_ikb_tnfa": 0.008,
+                "k_ikb_degrade_tnfa": 0.01,
+                "k_ikb_synth_tnfa": 0.0005,
+                "k_nfkb_trans_tnfa": 0.02,
+                "k_nfkb_export_tnfa": 0.001,
+                "k_transcription_tnfa": 0.005,
+                "k_translation_tnfa": 0.01,
+                "k_mRNA_degrade_tnfa": 0.001,
+                "k_tnfa_release_tnfa": 0.002,
+                "k_tnfa_degrade_tnfa": 0.0001,
+                "ca_threshold_tnfa": 0.0005,
+                "ca_hill_tnfa": 2,
+                "density_tnfa": 2e12
+            }
+        }
+    }
+}

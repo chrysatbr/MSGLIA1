@@ -1,0 +1,71 @@
+{
+    "Soma": {
+        "capacitance": {},
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 0.0001
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "IL1b": {},
+        "IL6": {},
+        "Piezo1": {},
+        "TNFa": {}
+    },
+    "Dendrites": {
+        "capacitance": {},
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 0.0001
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "IL1b": {},
+        "IL6": {},
+        "Piezo1": {},
+        "TNFa": {}
+    },
+    "Small Glia": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 0.8
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 0.0001,
+                "e_pas (mV)": -85.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "IL1b": {},
+        "IL6": {},
+        "Piezo1": {},
+        "TNFa": {}
+    },
+    "Large Glia": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 0.8
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "e_pas (mV)": -85.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "IL1b": {},
+        "IL6": {},
+        "Piezo1": {},
+        "TNFa": {}
+    }
+}

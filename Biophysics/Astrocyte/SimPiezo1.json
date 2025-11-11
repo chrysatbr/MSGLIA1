@@ -1,0 +1,114 @@
+{
+    "Soma": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 1.0
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 1e-4,
+                "e_pas (mV)": -70.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "Piezo1": {
+            "PARAMETER": {
+                "density_Piezo1": 1e8,
+                "mforce_Piezo1": 0,
+                "force_sensitivity_Piezo1": 0.05,
+                "force_threshold_Piezo1": 0.5,
+                "g_single_Piezo1": 27e-12,
+                "pca_Piezo1": 1.0,
+                "pna_Piezo1": 0.1,
+                "pk_Piezo1": 0.08
+            }
+        }
+    },
+    "Dendrites": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 1.0
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 1e-4,
+                "e_pas (mV)": -70.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "Piezo1": {
+            "PARAMETER": {
+                "density_Piezo1": 5e7,
+                "mforce_Piezo1": 0,
+                "force_sensitivity_Piezo1": 0.05,
+                "force_threshold_Piezo1": 0.5,
+                "g_single_Piezo1": 27e-12,
+                "pca_Piezo1": 1.0,
+                "pna_Piezo1": 0.1,
+                "pk_Piezo1": 0.08
+            }
+        }
+    },
+    "Small Glia": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 0.8
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 1e-4,
+                "e_pas (mV)": -85.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "Piezo1": {
+            "PARAMETER": {
+                "density_Piezo1": 1e7,
+                "mforce_Piezo1": 0,
+                "force_sensitivity_Piezo1": 0.04,
+                "force_threshold_Piezo1": 0.8,
+                "g_single_Piezo1": 27e-12,
+                "pca_Piezo1": 1.0,
+                "pna_Piezo1": 0.1,
+                "pk_Piezo1": 0.08
+            }
+        }
+    },
+    "Large Glia": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 0.8
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 0.001,
+                "e_pas (mV)": -85.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "Piezo1": {
+            "PARAMETER": {
+                "density_Piezo1": 2e8,
+                "mforce_Piezo1": 0,
+                "force_sensitivity_Piezo1": 0.06,
+                "force_threshold_Piezo1": 0.4,
+                "g_single_Piezo1": 27e-12,
+                "pca_Piezo1": 1.0,
+                "pna_Piezo1": 0.1,
+                "pk_Piezo1": 0.08
+            }
+        }
+    }
+}
