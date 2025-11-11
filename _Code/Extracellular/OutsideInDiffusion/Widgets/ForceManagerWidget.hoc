@@ -1,0 +1,286 @@
+// ForceManagerWidget.hoc  
+// User interface for managing PIEZO1 force application sources
+
+begintemplate ForceManagerWidget
+    public show, dismissHandler, updateSourceList
+    public selectedForceSource
+    
+    objref mainBox, sourceListBox, parameterBox
+    objref sourceList, selectedForceSource
+    
+    // Force parameters for UI
+    strdef sourceListStr
+    x_coord = 0
+    y_coord = 0  
+    z_coord = 0
+    radius_stim = 5
+    onset_time = 10
+    duration_time = 50
+    rise_time = 5
+    decay_time = 20
+    max_force = 3.0
+    threshold = 0.5
+    sensitivity = 0.05
+    profile_type = 0
+    
+    external forceLibrary
+    external mwh
+    
+    proc init() {
+        selectedForceSource = $o1  // nil object reference
+        updateSourceList()
+    }
+    
+    proc show() {
+        createMainUI()
+    }
+    
+    proc createMainUI() {
+        mainBox = new VBox()
+        mainBox.intercept(1)
+        {
+            // Title
+            xpanel("")
+            xlabel("================== PIEZO1 Force Application Manager ==================")
+            xpanel()
+            
+            // Source list section
+            createSourceListSection()
+            
+            // Parameter editing section  
+            createParameterSection()
+            
+            // Action buttons
+            createActionButtons()
+        }
+        mainBox.intercept(0)
+        mainBox.dismiss_action("dismissHandler()")
+        mainBox.map("PIEZO1 Force Manager", 200, 150, 600, 700)
+    }
+    
+    proc createSourceListSection() {
+        sourceListBox = new VBox()
+        sourceListBox.intercept(1)
+        {
+            xpanel("")
+            xlabel("Force Sources:")
+            xpanel()
+            
+            xpanel("")
+            xmenu("Source List")
+            updateSourceListMenu()
+            xmenu()
+            xpanel()
+            
+            xpanel("")
+            xbutton("Refresh List", "updateSourceList()")
+            xbutton("Delete Selected", "deleteSelectedSource()")
+            xbutton("Delete All", "deleteAllSources()")
+            xpanel()
+        }
+        sourceListBox.intercept(0)
+        sourceListBox.map()
+    }
+    
+    proc createParameterSection() {
+        parameterBox = new VBox()
+        parameterBox.intercept(1)
+        {
+            xpanel("")
+            xlabel("Force Source Parameters:")
+            xlabel("--------------------------- Spatial Parameters ---------------------------")
+            xpvalue("X coordinate (um)", &x_coord, 1)
+            xpvalue("Y coordinate (um)", &y_coord, 1) 
+            xpvalue("Z coordinate (um)", &z_coord, 1)
+            xpvalue("Application radius (um)", &radius_stim, 1)
+            
+            xlabel("--------------------------- Temporal Parameters ---------------------------")
+            xpvalue("Onset time (ms)", &onset_time, 1)
+            xpvalue("Duration (ms)", &duration_time, 1)
+            xpvalue("Rise time (ms)", &rise_time, 1)
+            xpvalue("Decay time (ms)", &decay_time, 1)
+            
+            xlabel("--------------------------- Force Parameters ---------------------------")
+            xpvalue("Maximum force (pN)", &max_force, 1)
+            xpvalue("Force threshold (pN)", &threshold, 1)
+            xpvalue("Sensitivity", &sensitivity, 1)
+            xradiobutton("Double exponential", "profile_type=0", profile_type==0)
+            xradiobutton("Ramp profile", "profile_type=1", profile_type==1)  
+            xradiobutton("Step profile", "profile_type=2", profile_type==2)
+            xpanel()
+        }
+        parameterBox.intercept(0)
+        parameterBox.map()
+    }
+    
+    proc createActionButtons() {
+        xpanel("")
+        xlabel("========================== Actions ==========================")
+        xbutton("Add New Force Source", "addNewForceSourceHandler()")
+        xbutton("Update Selected Source", "updateSelectedSourceHandler()")
+        xlabel("")
+        xbutton("Generate Random Sources", "generateRandomSourcesHandler()")
+        xbutton("Load from Current PIEZO1 Settings", "loadFromPiezoSettings()")
+        xlabel("")
+        xbutton("Apply Test Force", "applyTestForce()")
+        xbutton("Clear All Forces", "clearAllForces()")
+        xpanel()
+    }
+    
+    proc updateSourceList() { local i
+        // Update the source list display
+        if (forceLibrary.isEmpty()) {
+            sourceListStr = "No force sources defined"
+        } else {
+            sourceListStr = ""
+            for i = 0, forceLibrary.forceSourceList.count() - 1 {
+                strdef tempStr
+                sprint(tempStr, "[%d] Force at (%.1f,%.1f,%.1f), %.2fpN", 
+                      i, 
+                      forceLibrary.forceSourceList.o(i).spatialInfo.x,
+                      forceLibrary.forceSourceList.o(i).spatialInfo.y, 
+                      forceLibrary.forceSourceList.o(i).spatialInfo.z,
+                      forceLibrary.forceSourceList.o(i).magnitudeInfo.maxForce)
+                if (i == 0) {
+                    sourceListStr = tempStr
+                } else {
+                    strcat(sourceListStr, "\n")
+                    strcat(sourceListStr, tempStr)
+                }
+            }
+        }
+    }
+    
+    proc updateSourceListMenu() { local i
+        for i = 0, forceLibrary.forceSourceList.count() - 1 {
+            strdef menuStr, selectStr
+            sprint(menuStr, "[%d] Force Source", i)
+            sprint(selectStr, "selectForceSource(%d)", i)
+            xbutton(menuStr, selectStr)
+        }
+    }
+    
+    proc selectForceSource() { local idx
+        idx = $1
+        if (idx >= 0 && idx < forceLibrary.forceSourceList.count()) {
+            forceLibrary.selectSource(idx)
+            selectedForceSource = forceLibrary.getSelectedSource($o1)
+            loadSelectedSourceParameters()
+            printf("Selected force source %d\n", idx)
+        }
+    }
+    
+    proc loadSelectedSourceParameters() {
+        if (selectedForceSource != $o1) {  // Check if valid source selected
+            x_coord = selectedForceSource.spatialInfo.x
+            y_coord = selectedForceSource.spatialInfo.y
+            z_coord = selectedForceSource.spatialInfo.z  
+            radius_stim = selectedForceSource.spatialInfo.radius
+            
+            onset_time = selectedForceSource.temporalInfo.onset
+            duration_time = selectedForceSource.temporalInfo.duration
+            rise_time = selectedForceSource.temporalInfo.riseTime
+            decay_time = selectedForceSource.temporalInfo.decayTime
+            
+            max_force = selectedForceSource.magnitudeInfo.maxForce
+            threshold = selectedForceSource.magnitudeInfo.threshold
+            sensitivity = selectedForceSource.magnitudeInfo.sensitivity
+            profile_type = selectedForceSource.magnitudeInfo.profile
+        }
+    }
+    
+    proc addNewForceSourceHandler() {
+        forceLibrary.addNewForceSource(x_coord, y_coord, z_coord, radius_stim,
+                                      onset_time, duration_time, rise_time, decay_time,
+                                      max_force, threshold, sensitivity, profile_type)
+        updateSourceList()
+        mwh.showInfoBox("Added new force source")
+    }
+    
+    proc updateSelectedSourceHandler() {
+        if (forceLibrary.selectedIdx >= 0) {
+            // Remove old source and add updated one
+            forceLibrary.removeSource(forceLibrary.selectedIdx)
+            addNewForceSourceHandler()
+            mwh.showInfoBox("Updated force source parameters")
+        } else {
+            mwh.showWarningBox("No source selected for update")
+        }
+    }
+    
+    proc deleteSelectedSource() {
+        if (forceLibrary.selectedIdx >= 0) {
+            forceLibrary.removeSource(forceLibrary.selectedIdx)
+            updateSourceList()
+            mwh.showInfoBox("Deleted selected force source")
+        } else {
+            mwh.showWarningBox("No source selected for deletion")
+        }
+    }
+    
+    proc deleteAllSources() {
+        forceLibrary.deleteAll()
+        updateSourceList()
+        mwh.showInfoBox("Deleted all force sources")
+    }
+    
+    proc generateRandomSourcesHandler() { local numSources, seed
+        numSources = 10  // Default number
+        seed = 12345     // Default seed
+        
+        // Simple dialog for parameters
+        if (string_dialog("Number of random sources:", "10")) {
+            sscanf(hoc_ac_, "%d", &numSources)
+        }
+        
+        forceLibrary.generateRandomSources(numSources, seed)
+        updateSourceList()
+        mwh.showInfoBox("Generated random force sources")
+    }
+    
+    proc loadFromPiezoSettings() {
+        // Load parameters from existing PIEZO1 mechanism if present
+        forall {
+            if (ismembrane("Piezo1")) {
+                max_force = 3.0  // Default since mforce is dynamic
+                threshold = force_threshold_Piezo1
+                sensitivity = force_sensitivity_Piezo1
+                
+                // Get spatial coordinates from section
+                if (n3d() > 0) {
+                    x_coord = x3d(n3d()/2)
+                    y_coord = y3d(n3d()/2)  
+                    z_coord = z3d(n3d()/2)
+                }
+                break
+            }
+        }
+        mwh.showInfoBox("Loaded parameters from PIEZO1 settings")
+    }
+    
+    proc applyTestForce() {
+        // Apply current parameters as a test force to all PIEZO1 sections
+        forall {
+            if (ismembrane("Piezo1")) {
+                mforce_Piezo1 = max_force
+                force_sensitivity_Piezo1 = sensitivity
+            }
+        }
+        mwh.showInfoBox("Applied test force to all PIEZO1 sections")
+    }
+    
+    proc clearAllForces() {
+        // Clear all forces from PIEZO1 sections
+        forall {
+            if (ismembrane("Piezo1")) {
+                mforce_Piezo1 = 0
+            }
+        }
+        mwh.showInfoBox("Cleared all forces from PIEZO1 sections")
+    }
+    
+    proc dismissHandler() {
+        unmapIfNotNil(mainBox)
+    }
+    
+endtemplate ForceManagerWidget

@@ -1,0 +1,127 @@
+// ForceApplicationInfo.hoc
+// Information classes for PIEZO1 mechanical force application
+
+begintemplate ForceSpatialInfo
+    public x, y, z, radius, toString
+    
+    proc init() {
+        x = $1          // X coordinate (um)
+        y = $2          // Y coordinate (um)
+        z = $3          // Z coordinate (um)
+        radius = $4     // Application radius (um)
+    }
+    
+    func toString() {
+        strdef str
+        sprint(str, "Force site at (%.1f, %.1f, %.1f) um, radius %.1f um", x, y, z, radius)
+        return str
+    }
+endtemplate ForceSpatialInfo
+
+begintemplate ForceTemporalInfo
+    public onset, duration, riseTime, decayTime, toString
+    
+    proc init() {
+        onset = $1      // Onset time (ms)
+        duration = $2   // Duration of application (ms)
+        riseTime = $3   // Rise time constant (ms)
+        decayTime = $4  // Decay time constant (ms)
+    }
+    
+    func toString() {
+        strdef str
+        sprint(str, "Onset: %.1f ms, Duration: %.1f ms, Rise: %.1f ms, Decay: %.1f ms", 
+               onset, duration, riseTime, decayTime)
+        return str
+    }
+endtemplate ForceTemporalInfo
+
+begintemplate ForceMagnitudeInfo
+    public maxForce, threshold, sensitivity, profile, toString
+    
+    proc init() {
+        maxForce = $1       // Maximum force (pN)
+        threshold = $2      // Force threshold (pN)
+        sensitivity = $3    // Force sensitivity parameter
+        profile = $4        // Force profile type (0=exponential, 1=ramp, 2=step)
+    }
+    
+    func toString() {
+        strdef str, profileStr
+        if (profile == 0) {
+            profileStr = "exponential"
+        } else if (profile == 1) {
+            profileStr = "ramp"
+        } else {
+            profileStr = "step"
+        }
+        sprint(str, "Max force: %.2f pN, Threshold: %.2f pN, Profile: %s", 
+               maxForce, threshold, profileStr)
+        return str
+    }
+endtemplate ForceMagnitudeInfo
+
+begintemplate ForceApplicationSource
+    public spatialInfo, temporalInfo, magnitudeInfo, isActive, id
+    public toString, createShiftedCopy, applyForceAt
+    
+    objref spatialInfo, temporalInfo, magnitudeInfo
+    
+    proc init() {
+        spatialInfo = $o1
+        temporalInfo = $o2
+        magnitudeInfo = $o3
+        isActive = 1
+        id = $4
+    }
+    
+    func toString() {
+        strdef str
+        sprint(str, "Force Source %d: %s | %s | %s", 
+               id, spatialInfo.toString(), temporalInfo.toString(), magnitudeInfo.toString())
+        return str
+    }
+    
+    obfunc createShiftedCopy() {
+        objref newSpatial, newForceSource
+        newSpatial = new ForceSpatialInfo($1, $2, $3, spatialInfo.radius)
+        newForceSource = new ForceApplicationSource(newSpatial, temporalInfo, magnitudeInfo, id+1000)
+        return newForceSource
+    }
+    
+    func calculateForceAtTime() { local t, force
+        t = $1
+        
+        if (t < temporalInfo.onset || !isActive) {
+            return 0
+        }
+        
+        if (t > temporalInfo.onset + temporalInfo.duration) {
+            return 0
+        }
+        
+        // Calculate force based on profile type
+        if (magnitudeInfo.profile == 0) {  // Double exponential
+            if (temporalInfo.decayTime != temporalInfo.riseTime) {
+                force = magnitudeInfo.maxForce * (temporalInfo.decayTime/(temporalInfo.decayTime - temporalInfo.riseTime)) * \
+                       (-exp(-(t - temporalInfo.onset)/temporalInfo.riseTime) + \
+                        exp(-(t - temporalInfo.onset)/temporalInfo.decayTime))
+            } else {
+                force = magnitudeInfo.maxForce * ((t - temporalInfo.onset)/temporalInfo.riseTime) * \
+                       exp(-(t - temporalInfo.onset)/temporalInfo.riseTime)
+            }
+        } else if (magnitudeInfo.profile == 1) {  // Ramp
+            if (t < temporalInfo.onset + temporalInfo.riseTime) {
+                force = magnitudeInfo.maxForce * (t - temporalInfo.onset) / temporalInfo.riseTime
+            } else if (t < temporalInfo.onset + temporalInfo.duration - temporalInfo.decayTime) {
+                force = magnitudeInfo.maxForce
+            } else {
+                force = magnitudeInfo.maxForce * (temporalInfo.onset + temporalInfo.duration - t) / temporalInfo.decayTime
+            }
+        } else {  // Step function
+            force = magnitudeInfo.maxForce
+        }
+        
+        return force
+    }
+endtemplate ForceApplicationSource
