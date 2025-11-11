@@ -1,0 +1,16 @@
+
+# Ignored files:
+*.c
+*.o
+*.so
+*.tmp
+last_file_path.txt
+temp*.pickle
+temp.html
+
+# Ignored folders:
+.vs/
+Debug/
+__pycache__/
+obj/
+temp_folder/
