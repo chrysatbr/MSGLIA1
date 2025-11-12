@@ -1,0 +1,191 @@
+// ForceLibrary.hoc
+// Management system for PIEZO1 mechanical force sources
+
+begintemplate ForceLibrary
+    public forceSourceList, selectedIdx
+    public addNewForceSource, deleteAll, isEmpty, getSelectedSource
+    public selectSource, removeSource, toString, applyForcesToCell
+    
+    objref forceSourceList
+    
+    proc init() {
+        forceSourceList = new List()
+        selectedIdx = -1
+    }
+    
+    proc addNewForceSource() {
+        objref spatialInfo, temporalInfo, magnitudeInfo, newSource
+        
+        // Create new force source with parameters
+        spatialInfo = new ForceSpatialInfo($1, $2, $3, $4)  // x, y, z, radius
+        temporalInfo = new ForceTemporalInfo($5, $6, $7, $8)  // onset, duration, rise, decay
+        magnitudeInfo = new ForceMagnitudeInfo($9, $10, $11, $12)  // maxForce, threshold, sensitivity, profile
+        
+        newSource = new ForceApplicationSource(spatialInfo, temporalInfo, magnitudeInfo, forceSourceList.count())
+        forceSourceList.append(newSource)
+        
+        selectedIdx = forceSourceList.count() - 1
+        
+        printf("Added force source: %s\n", newSource.toString())
+    }
+    
+    proc addDefaultForceSource() {
+        // Add a default force source for quick testing
+        addNewForceSource(0, 0, 0, 5,     // x, y, z, radius (um)
+                         10, 50, 5, 20,   // onset, duration, rise, decay (ms)  
+                         3.0, 0.5, 0.05, 0)  // maxForce, threshold, sensitivity, profile
+    }
+    
+    proc deleteAll() {
+        forceSourceList.remove_all()
+        selectedIdx = -1
+        printf("Deleted all force sources\n")
+    }
+    
+    func isEmpty() {
+        return forceSourceList.count() == 0
+    }
+    
+    obfunc getSelectedSource() {
+        if (selectedIdx >= 0 && selectedIdx < forceSourceList.count()) {
+            return forceSourceList.o(selectedIdx)
+        }
+        return $o1  // return nil object if invalid selection
+    }
+    
+    proc selectSource() {
+        selectedIdx = $1
+        if (selectedIdx >= forceSourceList.count()) {
+            selectedIdx = forceSourceList.count() - 1
+        }
+        if (selectedIdx < 0) {
+            selectedIdx = 0
+        }
+    }
+    
+    proc removeSource() { local idx
+        idx = $1
+        if (idx >= 0 && idx < forceSourceList.count()) {
+            forceSourceList.remove(idx)
+            if (selectedIdx >= forceSourceList.count()) {
+                selectedIdx = forceSourceList.count() - 1
+            }
+            printf("Removed force source at index %d\n", idx)
+        }
+    }
+    
+    func toString() {
+        strdef str, tempStr
+        str = ""
+        sprint(tempStr, "Force Library contains %d sources:\n", forceSourceList.count())
+        str = tempStr
+        
+        for i = 0, forceSourceList.count() - 1 {
+            sprint(tempStr, "  [%d] %s\n", i, forceSourceList.o(i).toString())
+            strcat(str, tempStr)
+        }
+        return str
+    }
+    
+    // Calculate distance between point and force source
+    func calculateDistance() { local dx, dy, dz
+        dx = $1 - $4  // x - source_x
+        dy = $2 - $5  // y - source_y  
+        dz = $3 - $6  // z - source_z
+        return sqrt(dx*dx + dy*dy + dz*dz)
+    }
+    
+    // Apply forces from all active sources to the cell at current time
+    proc applyForcesToCell() { local currentTime, i, j, numSources, x_pt, y_pt, z_pt, dist, force
+        objref currentSource
+        
+        currentTime = $1  // Current simulation time
+        numSources = forceSourceList.count()
+        
+        if (numSources == 0) {
+            return
+        }
+        
+        forall {
+            if (ismembrane("Piezo1")) {
+                // Initialize force to zero
+                mforce_Piezo1 = 0
+                
+                // Get section coordinates
+                if (n3d() > 0) {
+                    x_pt = x3d(n3d()/2)  // Use middle point of section
+                    y_pt = y3d(n3d()/2)
+                    z_pt = z3d(n3d()/2)
+                    
+                    // Check all force sources
+                    for i = 0, numSources - 1 {
+                        currentSource = forceSourceList.o(i)
+                        
+                        if (currentSource.isActive) {
+                            // Calculate distance to source
+                            dist = calculateDistance(x_pt, y_pt, z_pt, 
+                                                   currentSource.spatialInfo.x,
+                                                   currentSource.spatialInfo.y, 
+                                                   currentSource.spatialInfo.z)
+                            
+                            // Apply force if within radius
+                            if (dist <= currentSource.spatialInfo.radius) {
+                                force = currentSource.calculateForceAtTime(currentTime)
+                                
+                                // Spatial decay (optional - force decreases with distance)
+                                if (dist > 0 && currentSource.spatialInfo.radius > 0) {
+                                    force = force * (1 - dist/currentSource.spatialInfo.radius)
+                                }
+                                
+                                // Add to existing force (multiple sources can sum)
+                                mforce_Piezo1 = mforce_Piezo1 + force
+                                
+                                // Update sensitivity
+                                force_sensitivity_Piezo1 = currentSource.magnitudeInfo.sensitivity
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Generate random force sources within specified bounds
+    proc generateRandomSources() { local numSources, i, x, y, z, radius, onset, maxForce
+        objref rng
+        
+        numSources = $1
+        rng = new Random()
+        rng.MCellRan4($2)  // seed
+        
+        deleteAll()  // Clear existing sources
+        
+        printf("Generating %d random force sources...\n", numSources)
+        
+        for i = 0, numSources - 1 {
+            // Random spatial coordinates
+            x = rng.uniform(-50, 50)      // X coordinate
+            y = rng.uniform(-50, 50)      // Y coordinate  
+            z = rng.uniform(-20, 20)      // Z coordinate
+            radius = rng.uniform(2, 8)    // Application radius
+            
+            // Random temporal parameters
+            onset = rng.uniform(5, 50)    // Onset time
+            
+            // Random force magnitude
+            maxForce = rng.uniform(1.0, 5.0)  // Maximum force
+            
+            // Add source with default temporal and standard parameters
+            addNewForceSource(x, y, z, radius,           // spatial
+                             onset, 30, 3, 15,           // temporal  
+                             maxForce, 0.5, 0.05, 0)     // magnitude
+        }
+        
+        printf("Generated %d random force sources\n", numSources)
+    }
+    
+endtemplate ForceLibrary
+
+// Global force library instance
+objref forceLibrary
+forceLibrary = new ForceLibrary()

@@ -1,0 +1,146 @@
+
+begintemplate SimConstantElectricalSimulations
+    
+    public preShowCheck, show, preRun, preContinue, postRun, simDismissHandler
+    public biophysJsonFileNameOrEmpty, isCustomProcAdvance, isAltRunControl
+    
+    // Just a workaround to avoid the error in GraphUtils.parseVarsFromTheGraph
+    public CIDel, CIDur, CIAmpl, SynTau1, SynTau2, SynE, SynAmp, NumberStimulus, IntervalBetweenStimul
+    
+    external altRunControlWidget
+    external tstop
+    external unmapIfNotNil
+    external soma_ref
+    
+    strdef biophysJsonFileNameOrEmpty
+    isCustomProcAdvance = -1
+    isAltRunControl = -1
+    
+    // UI
+    objref vBoxConstantStimulations
+    
+    // Stimulators
+    objref electricalStim, current, synapticInput, NetInput
+    
+    
+    proc init() {
+        biophysJsonFileNameOrEmpty = ""
+        isCustomProcAdvance = 0
+        isAltRunControl = 1
+    }
+    
+    func preShowCheck() {
+        return 0
+    }
+    
+    // Opens Constant Electrical Simulation window.
+    proc show() {
+        initParamsConstantStimulation()
+        showConstantUi()
+    }
+    
+    func preRun() {
+        // !! it would be better to split "proc stimulateConstant" into two parts and move the first one to "proc show":
+        //    part 1 - creation of all the objects (they will be destroyed in "proc simDismissHandler")
+        //    part 2 - initialization of the objects based on GUI
+        stimulateConstant(CIDel, CIDur, CIAmpl, SynTau1, SynTau2, SynE, SynAmp, NumberStimulus, IntervalBetweenStimul)
+        return 0
+    }
+    
+    func preContinue() {
+        return 0
+    }
+    
+    proc postRun() {
+        // Empty by design
+    }
+    
+    proc simDismissHandler() {
+        
+        unmapIfNotNil(vBoxConstantStimulations)
+        
+        // Remove point processes after simulation
+        objref electricalStim, current, synapticInput, NetInput
+    }
+    
+    // All next staff is private
+    
+    
+    // Electrical stimulation
+    // This set of parameters define the single synaptic input.
+    // The user can add here as much as possible.
+    // $1 - Current delay
+    // $2 - Current duration
+    // $3 - Current amplitude
+    // $4 - Rise time
+    // $5 - Decay time
+    // $6 - Reversal potential
+    // $7 - Synaptic amplitude
+    // $8 - Number of stimulus
+    // $9 - Interval between stimulus
+    proc stimulateConstant()  { // Procedure of different stimulations
+        soma_ref.o(0).sec {
+            electricalStim = new NetStim()
+            electricalStim.interval  = $9    //ms
+            electricalStim.start = 0      // ms
+            electricalStim.number = $8
+            electricalStim.noise = 0      // 0 or 1 - noise
+            
+            // Electrode stimulation into the soma
+            current = new IClamp(0.5)
+            current.del = $1  // ms 
+            current.dur = $2  // ms
+            current.amp = $3  // nA
+            
+            // Synaptic stimualtion into the soma
+            synapticInput = new Exp2Syn(0.5)
+            synapticInput.tau1 = $4   //0.5 //  rise time, ms
+            synapticInput.tau2 = $5   //5   //   decay time, ms
+            synapticInput.e = $6      //0      // reversal potential, mV 
+        }
+        
+        NetInput = new NetCon(electricalStim, synapticInput, 0, 0, $7)
+    }
+    
+    // Inits UI and simulation parameters.
+    proc initParamsConstantStimulation() {
+        CIDel = 0
+        CIDur = 100000              // ms
+        CIAmpl = 0                  // nA
+        SynTau1 = 5                 // ms
+        SynTau2 = 10                // ms
+        SynE = 0                    // mV
+        SynAmp = 0.0                // nA
+        NumberStimulus = 0
+        IntervalBetweenStimul = 1   // ms
+        tstop = 10
+    }
+    
+    // Shows Constant Electrical Simulation window.
+    proc showConstantUi() {
+        vBoxConstantStimulations = new VBox()
+        vBoxConstantStimulations.intercept(1)
+        {
+            xpanel("")
+            xlabel("Constan depolarization current into soma")
+            xpvalue("Offset of current clamp (ms)", &CIDel, 1)
+            xpvalue("Duration of current clamp (ms)", &CIDur, 1)
+            xpvalue("Amplitude of current clamp (nA)", &CIAmpl, 1)
+            xlabel("---------------------------------------------------------------------------------------------------------")
+            xlabel("Alpha current stimulation into soma")
+            xpvalue("Alpha current rize time (ms)", &SynTau1, 1)
+            xpvalue("Alpha current decay  time (ms)", &SynTau2, 1)
+            xpvalue("Alpha current reverse potential (mV)", &SynE, 1)
+            xpvalue("Alpha conductande (nS)", &SynAmp, 1)
+            xpvalue("Number stimuli of Alpha currents", &NumberStimulus, 1)
+            xpvalue("Interval between stimuli (ms)", &IntervalBetweenStimul, 1)
+            xlabel("---------------------------------------------------------------------------------------------------------")
+            xpvalue("Simulation time (ms)", &tstop, 1)
+            xbutton("Run simulation", "altRunControlWidget.initAndRunHandler()")
+            xpanel(0)
+        }
+        vBoxConstantStimulations.intercept(0)
+        vBoxConstantStimulations.map("Constant Electrical Stimulation into Soma")
+    }
+    
+endtemplate SimConstantElectricalSimulations

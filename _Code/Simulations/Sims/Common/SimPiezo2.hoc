@@ -1,0 +1,325 @@
+// Forward declaration - will be implemented at the bottom
+proc Piezo2Iteration() { }
+
+// Simple 2D distance calculation utility
+objref geomMath
+geomMath = new List()
+
+// Distance calculation function
+func dist2D_PtToPt_squared() {
+    return ($1-$3)*($1-$3) + ($2-$4)*($2-$4)
+}
+
+begintemplate SimPiezo2
+    
+    public preShowCheck, show, preRun, preContinue, advance, postRun, simDismissHandler
+    public biophysJsonFileNameOrEmpty, isCustomProcAdvance, isAltRunControl
+    
+    // Just a workaround to avoid the error in GraphUtils.parseVarsFromTheGraph
+    public PX, PY, PZ, R_STIM, TimeBegin, MaxForce, PX2, ForceSensitivity, Tau1, Tau2
+    
+    external Piezo2Iteration
+    external seClampHelper
+    external altRunControlWidget
+    external tstop
+    external removeItemFromList, unmapIfNotNil
+    external dendrite_ref
+    external graphList, fast_flush_list
+    
+    strdef biophysJsonFileNameOrEmpty
+    isCustomProcAdvance = -1
+    isAltRunControl = -1
+    strdef outTxtFileRelPathName
+    
+    // UI - Added graphPiezoCurrent
+    objref vBoxPiezoMain, vBoxGraphSEClamp, vBoxGraphForce, vBoxGraphPiezoCurrent, vBoxPlotShapeVoltage, vBoxPlotShapeForce, vBoxPlotShapeIPiezo
+    objref graphSEClamp, graphForce, graphPiezoCurrent, plotShapeVoltage, plotShapeForce, plotShapeIPiezo
+    
+    // Statistics file
+    objref filePiezo2Results
+    
+    
+    proc init() {
+        biophysJsonFileNameOrEmpty = "SimPiezo2.json"
+        isCustomProcAdvance = 1
+        isAltRunControl = 1
+        
+        outTxtFileRelPathName = "Text results/Piezo2_dynamics.txt"
+        
+        filePiezo2Results = new File()
+    }
+    
+    func preShowCheck() {
+        return 0
+    }
+    
+    // Opens Piezo2 simulation window.
+    proc show() {
+        initParamsPiezo2()
+        seClampHelper.deployClamp(0)
+        showPiezo2Ui()
+    }
+    
+    // Updates Force values on the cell.
+    proc advance() {
+        fadvance()
+        Piezo2Iteration(PX, PY, R_STIM, TimeBegin, Tau1, MaxForce, PX2, ForceSensitivity, Tau2, PZ)
+        graphSEClamp.exec_menu("View = plot")
+        graphForce.exec_menu("View = plot")
+        graphPiezoCurrent.exec_menu("View = plot")
+        plotShapeForce.exec_menu("View = plot")
+        
+        // Write data to file: time, Force, Piezo_current, Voltage
+        filePiezo2Results.printf("%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\n", t, dendrite_ref.o(0).sec.mforce_Piezo2(0.5), dendrite_ref.o(0).sec.ipiezo_Piezo2(0.5), dendrite_ref.o(0).sec.v(0.5))
+    }
+    
+    proc preRun() {
+        filePiezo2Results.wopen(outTxtFileRelPathName)
+    }
+    
+    proc preContinue() {
+        filePiezo2Results.aopen(outTxtFileRelPathName)
+    }
+    
+    proc postRun() {
+        filePiezo2Results.close()
+        print "Piezo2 results saved to: ", outTxtFileRelPathName
+    }
+    
+    proc simDismissHandler() {
+        
+        removeItemFromList(graphList[1], graphForce)
+        removeItemFromList(graphList[1], graphSEClamp)
+        removeItemFromList(graphList[1], graphPiezoCurrent)
+        removeItemFromList(fast_flush_list, plotShapeForce)
+        removeItemFromList(fast_flush_list, plotShapeVoltage)
+        removeItemFromList(fast_flush_list, plotShapeIPiezo)
+        
+        unmapIfNotNil(vBoxPiezoMain)
+        unmapIfNotNil(vBoxGraphSEClamp)
+        unmapIfNotNil(vBoxGraphForce)
+        unmapIfNotNil(vBoxGraphPiezoCurrent)
+        unmapIfNotNil(vBoxPlotShapeVoltage)
+        unmapIfNotNil(vBoxPlotShapeForce)
+        unmapIfNotNil(vBoxPlotShapeIPiezo)
+        
+        seClampHelper.removeClamp()
+    }
+    
+    // All next staff is private
+    
+    
+    // Sets initial UI and simulation parameters.
+    proc initParamsPiezo2() {
+        // Parameter of Piezo2 mechanical stimulation - optimized for physiological response
+        PX = 0                // X- Coordinate of the stimulation site
+        PY = -20              // Y - coordinate of the stimulation site  
+        PZ = 0                // Z - coordinate of the stimulation site
+        PX2 = 0               // Distance in x-coordinate of another stimulation site
+        R_STIM = 5.0          // Radius of mechanical stimulation
+        TimeBegin = 5         // Time of stimulation onset
+        Tau1 = 0.5            // Rise time of force application (faster kinetics for Piezo2)
+        Tau2 = 15             // Decay time of force application (faster kinetics for Piezo2)
+        MaxForce = 3          // Maximum force in pN (lower threshold for Piezo2)
+        ForceSensitivity = 0.08 // Force sensitivity parameter (higher for Piezo2)
+
+        forall {
+            if (ismembrane("Piezo2")) {
+                // Extracellular concentrations (mM)
+                cao = 2.0      // Calcium outside
+                nao = 145.0    // Sodium outside  
+                ko = 5.0       // Potassium outside
+                
+                // Intracellular concentrations (mM)
+                cai = 0.0001   // Calcium inside (very low)
+                nai = 10.0     // Sodium inside
+                ki = 140.0     // Potassium inside
+                
+                // Use physiologically realistic density
+                density_Piezo2 = 1e8   // Reduced density for realistic currents
+            }
+        }
+    }
+    
+    // Shows Piezo2 simulation UI.
+    proc showPiezo2Ui() {
+        vBoxPiezoMain = new VBox()
+        vBoxPiezoMain.intercept(1)
+        {
+            xpanel("")
+            xlabel("================== Piezo2 Mechanical Stimulation ==================")
+            xpvalue("X coordinate (um)", &PX, 1)
+            xpvalue("Y coordinate (um)", &PY, 1)
+            xpvalue("Z coordinate (um)", &PZ, 1)
+            xpvalue("Stimulation radius (um)", &R_STIM, 1)
+            xpvalue("Stimulation onset (ms)", &TimeBegin, 1)
+            xpvalue("Maximum Force (pN)", &MaxForce, 1)
+            xpvalue("Distance between two stimulation sites (um)", &PX2, 1)
+            xpvalue("Force sensitivity", &ForceSensitivity, 1)
+            xpvalue("Tau rise (ms)", &Tau1, 1)
+            xpvalue("Tau decay (ms)", &Tau2, 1)
+            xlabel("==================================================================")
+            xpanel(625,164)
+            
+            xpanel("")
+            xlabel("================== Voltage clamp of soma==================")
+            xpvalue("Somatic voltage clamp", &seClampHelper.seClamp.amp1, 1)
+            xpvalue("Clamp duration", &seClampHelper.seClamp.dur1, 1)
+            xlabel("----------------------------------------------------------------------------------------------------------")
+            xpvalue("Simulation time (ms)", &tstop, 1)
+            xbutton("Run simulation", "altRunControlWidget.initAndRunHandler()")
+            xpanel(328,129)
+        }
+        vBoxPiezoMain.intercept(0)
+        vBoxPiezoMain.map("Piezo2 settings", 195, 102, 300, 530)
+        
+        vBoxGraphSEClamp = new VBox()
+        vBoxGraphSEClamp.intercept(1)
+        {
+            graphSEClamp = new Graph(0)
+            graphList[1].append(graphSEClamp)
+            graphSEClamp.size(0,150,-0.015,-5.82077e-010)
+            graphSEClamp.view(0, -0.015, 150, 0.015, 1145, 705, 400, 200)
+            graphSEClamp.addexpr("seClampHelper.seClamp.i", 1, 1, 0.8, 0.9, 2)
+            graphSEClamp.yaxis(0)
+            graphSEClamp.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphSEClamp.label(0.1, 0.09, "Clamp current (nA)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphSEClamp.intercept(0)
+        vBoxGraphSEClamp.map("SE Clamp Current vs Time", 1145, 705, 400, 200)
+
+        vBoxGraphForce = new VBox()
+        vBoxGraphForce.intercept(1)
+        {
+            graphForce = new Graph(0)
+            graphList[1].append(graphForce)
+            graphForce.size(0,150,-3.49246e-010,0.0101)
+            graphForce.view(0, -5, 150, 10, 602, 705, 400, 200)
+            graphForce.addvar("dendrite_ref.o(0).sec.mforce_Piezo2( 0.5 )", 1, 1, 0.8, 0.9, 2)
+            graphForce.yaxis(0)
+            graphForce.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphForce.label(0.1, 0.09, "Applied Force (pN)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphForce.intercept(0)
+        vBoxGraphForce.map("Force Profile", 602, 705, 400, 200)
+
+        // New Piezo Current Graph
+        vBoxGraphPiezoCurrent = new VBox()
+        vBoxGraphPiezoCurrent.intercept(1)
+        {
+            graphPiezoCurrent = new Graph(0)
+            graphList[1].append(graphPiezoCurrent)
+            graphPiezoCurrent.size(0,150,-0.01,0.01)
+            graphPiezoCurrent.view(0, -0.01, 150, 0.02, 1745, 705, 400, 200)
+            graphPiezoCurrent.addvar("dendrite_ref.o(0).sec.ipiezo_Piezo2( 0.5 )", 1, 1, 0.8, 0.9, 2)
+            graphPiezoCurrent.yaxis(0)
+            graphPiezoCurrent.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphPiezoCurrent.label(0.1, 0.09, "Piezo Current (mA/cm2)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphPiezoCurrent.intercept(0)
+        vBoxGraphPiezoCurrent.map("Piezo2 Current vs Time", 1745, 705, 400, 200)
+        
+        vBoxPlotShapeForce = new VBox()
+        vBoxPlotShapeForce.intercept(1)
+        {
+            plotShapeForce = new PlotShape(0)
+            fast_flush_list.append(plotShapeForce)
+            plotShapeForce.size(-50,50,-50,50)
+            plotShapeForce.view(-50, -49.9003, 100, 100, 601, 102, 400.64, 400.32)
+            plotShapeForce.exec_menu("Shape Plot")
+            plotShapeForce.exec_menu("View = plot")
+            plotShapeForce.variable("mforce_Piezo2")
+            plotShapeForce.label(0.5, 0.09, "Applied Force (pN)", 2, 1, 0, 1, 1)
+            plotShapeForce.show(0)
+            plotShapeForce.scale(0,5)
+        }
+        vBoxPlotShapeForce.intercept(0)
+        vBoxPlotShapeForce.map("Force Distribution", 601, 102, 400.64, 400.32)
+        
+        vBoxPlotShapeVoltage = new VBox()
+        vBoxPlotShapeVoltage.intercept(1)
+        {
+            plotShapeVoltage = new PlotShape(0)
+            fast_flush_list.append(plotShapeVoltage)
+            plotShapeVoltage.size(-50,50,-50,50)
+            plotShapeVoltage.view(-50, -49.9003, 100, 100, 1145, 102, 400.64, 400.32)
+            plotShapeVoltage.exec_menu("Shape Plot")
+            plotShapeVoltage.exec_menu("View = plot")
+            plotShapeVoltage.variable("v")
+            plotShapeVoltage.label(0.1, 0.99, "Transmembrane Voltage (mV)", 2, 1, 0, 1, 1)
+            plotShapeVoltage.show(0)
+            plotShapeVoltage.scale(-50, 50)
+        }
+        vBoxPlotShapeVoltage.intercept(0)
+        vBoxPlotShapeVoltage.map("Voltage", 1145, 102, 400.64, 400.32)
+        
+        vBoxPlotShapeIPiezo = new VBox()
+        vBoxPlotShapeIPiezo.intercept(1)
+        {
+            plotShapeIPiezo = new PlotShape(0)
+            fast_flush_list.append(plotShapeIPiezo)
+            plotShapeIPiezo.size(-50,50,-50,50)
+            plotShapeIPiezo.view(-50, -49.9003, 100, 100, 1745, 102, 400.64, 400.32)
+            plotShapeIPiezo.exec_menu("Shape Plot")
+            plotShapeIPiezo.exec_menu("View = plot")
+            plotShapeIPiezo.variable("ipiezo_Piezo2")
+            plotShapeIPiezo.label(0.15, 0.99, "I_Piezo2 (mA/cm2)", 2, 1, 0, 1, 1)
+            plotShapeIPiezo.show(0)
+            plotShapeIPiezo.scale(-0.01,0.01)
+        }
+        vBoxPlotShapeIPiezo.intercept(0)
+        vBoxPlotShapeIPiezo.map("Piezo2 Current", 1745, 202, 400.64, 400.32)
+    }
+    
+endtemplate SimPiezo2
+
+
+// Updates Piezo2 force stimulation on the cell.
+// $1 - X coordinate circle center
+// $2 - Y coordinate circle center  
+// $3 - Radius of stimulation area
+// $4 - TimeBegin
+// $5 - Time of force rise
+// $6 - Maximum Force (pN)
+// $7 - PX2 (second stimulation site offset)
+// $8 - Force sensitivity
+// $9 - Time decay
+// $10 - Z coordinate circle center
+proc Piezo2Iteration() { local tau1, tau2, BaselineForce, dist_sq1, dist_sq2, z_diff, force_profile
+    tau1 = $5
+    tau2 = $9
+    BaselineForce = 0
+    
+    forall {
+        // Check if the section has the Piezo2 mechanism before trying to access its variables
+        if (ismembrane("Piezo2")) {
+            // Calculate distances for both stimulation sites
+            dist_sq1 = dist2D_PtToPt_squared($1, $2, x3d(1), y3d(1))
+            dist_sq2 = dist2D_PtToPt_squared($1+$7, $2, x3d(1), y3d(1))
+            z_diff = abs($10-z3d(1))
+            
+            // Check if point is within stimulation area and time condition is met
+            if (((dist_sq1 < $3^2) || (dist_sq2 < $3^2)) && (z_diff < 10) && (t > $4)) {
+                // Apply force with double exponential profile
+                if (tau2 != tau1) {
+                    force_profile = BaselineForce + $6*(tau2/(tau2-tau1)*(-exp(-(t-$4)/tau1) + exp(-(t-$4)/tau2)))
+                } else {
+                    // Handle case where tau1 = tau2 to avoid division by zero
+                    force_profile = BaselineForce + $6*((t-$4)/tau1)*exp(-(t-$4)/tau1)
+                }
+                
+                // Apply force threshold - only set force if above threshold
+                if (force_profile > force_threshold_Piezo2) {
+                    mforce_Piezo2 = force_profile
+                } else {
+                    mforce_Piezo2 = 0
+                }
+            } else {
+                mforce_Piezo2 = BaselineForce
+            }
+            
+            // Update force sensitivity
+            force_sensitivity_Piezo2 = $8
+        }
+    }
+}

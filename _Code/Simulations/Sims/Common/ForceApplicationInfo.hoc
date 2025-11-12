@@ -1,0 +1,12 @@
+// Minimal test version
+begintemplate ForceSpatialInfo
+    public x, y, z, radius
+    proc init() {
+        x = $1
+        y = $2  
+        z = $3
+        radius = $4
+    }
+endtemplate ForceSpatialInfo
+
+printf("ForceApplicationInfo.hoc loaded successfully\n")

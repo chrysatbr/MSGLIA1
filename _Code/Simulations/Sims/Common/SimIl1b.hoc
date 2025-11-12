@@ -1,0 +1,543 @@
+// Forward declaration - will be implemented at the bottom
+proc IL1bIteration() { }
+
+// Top-level procedure to insert IL1b mechanisms - REQUIRED by NEURON
+proc InsertIL1bMechanisms() {
+    insert IL1b
+    
+    // === BASIC PARAMETERS ===
+    // LPS stimulation
+    lps_stim_IL1b = 0
+    lps_sensitivity_IL1b = 0.12
+    lps_threshold_IL1b = 0.8
+    
+    // Calcium-dependent activation
+    ca_threshold_IL1b = 0.00008
+    ca_sensitivity_IL1b = 2.2
+    
+    // IL-1β production
+    basal_production_IL1b = 0.005
+    max_production_IL1b = 12.0
+    tau_production_IL1b = 80
+    tau_decay_IL1b = 450
+    tau_processing_IL1b = 30
+    
+    // IL-1β-induced conductance
+    g_il1b_IL1b = 0.00012
+    pca_IL1b = 1.0
+    pna_IL1b = 0.12
+    pk_IL1b = 0.09
+    
+    // === MRNA DYNAMICS ===
+    tau_mrna_IL1b = 45
+    
+    // === FEEDBACK INHIBITION ===
+    // IL-10 feedback (fast negative feedback)
+    il10_inhibition_strength_IL1b = 0.6
+    tau_il10_IL1b = 55
+    il10_production_factor_IL1b = 0.25
+    il10_decay_IL1b = 0.004
+    
+    // TGFβ feedback (slow negative feedback)
+    tgfb_inhibition_strength_IL1b = 0.5
+    tau_tgfb_IL1b = 210
+    tgfb_production_factor_IL1b = 0.15
+    tgfb_decay_IL1b = 0.002
+    
+    // === TNFα ACTIVATION (from network) ===
+    tnfa_activation_factor_IL1b = 0.8
+    tnfa_activation_k50_IL1b = 3.0
+    tnfa_hill_n_IL1b = 2.5
+    tau_tnfa_IL1b = 120
+    tnfa_decay_IL1b = 0.003
+    
+    // === AUTOCRINE SELF-REGULATION ===
+    il1b_autocrine_hill_n_IL1b = 2.2
+    il1b_autocrine_k50_IL1b = 4.0
+    
+    // === RECEPTOR DYNAMICS ===
+    // IL-1R1 receptor (Type I, signaling)
+    il1r1_expression_IL1b = 1.0
+    il1r1_kon_IL1b = 0.015
+    il1r1_koff_IL1b = 0.002
+    
+    // IL-1R2 receptor (Type II, decoy)
+    il1r2_expression_IL1b = 0.3
+    il1r2_kon_IL1b = 0.02
+    il1r2_koff_IL1b = 0.001
+    
+    // === NFκB PATHWAY ===
+    nfkb_activation_threshold_IL1b = 0.08
+    nfkb_decay_rate_IL1b = 0.025
+    nfkb_activation_rate_IL1b = 0.06
+    
+    // === INFLAMMASOME (NLRP3) ===
+    inflammasome_threshold_IL1b = 0.15
+    inflammasome_activation_rate_IL1b = 0.08
+    inflammasome_decay_rate_IL1b = 0.015
+    caspase1_activity_IL1b = 1.0
+    processing_rate_IL1b = 0.12
+    
+    // === TRANSLATION AND SECRETION ===
+    translation_delay_factor_IL1b = 0.12
+    secretion_rate_IL1b = 0.06
+}
+
+// Simple 2D distance calculation utility
+objref geomMath
+geomMath = new List()
+
+// Distance calculation function
+func dist2D_PtToPt_squared() {
+    return ($1-$3)*($1-$3) + ($2-$4)*($2-$4)
+}
+
+begintemplate SimIL1b
+    
+    public preShowCheck, show, preRun, preContinue, advance, postRun, simDismissHandler
+    public biophysJsonFileNameOrEmpty, isCustomProcAdvance, isAltRunControl
+    
+    // Just a workaround to avoid the error in GraphUtils.parseVarsFromTheGraph
+    public PX, PY, PZ, R_STIM, TimeBegin, MaxLPS, PX2, LPSSensitivity, Tau1, Tau2
+    
+    external IL1bIteration
+    external seClampHelper
+    external altRunControlWidget
+    external tstop
+    external removeItemFromList, unmapIfNotNil
+    external dendrite_ref
+    external graphList, fast_flush_list
+    
+    strdef biophysJsonFileNameOrEmpty
+    isCustomProcAdvance = -1
+    isAltRunControl = -1
+    strdef outTxtFileRelPathName
+
+	
+    
+    // UI - Enhanced with additional graphs for IL-1β specific mechanisms
+    objref vBoxIL1bMain, vBoxGraphSEClamp, vBoxGraphLPS, vBoxGraphIL1bConc
+    objref vBoxGraphProIL1b, vBoxGraphMatureIL1b, vBoxGraphInflammasome
+    objref vBoxGraphIL10, vBoxGraphTGFb, vBoxGraphTNFa
+    objref vBoxPlotShapeVoltage, vBoxPlotShapeLPS, vBoxPlotShapeIL1b
+    objref graphSEClamp, graphLPS, graphIL1bConc, graphProIL1b, graphMatureIL1b
+    objref graphInflammasome, graphIL10, graphTGFb, graphTNFa
+    objref plotShapeVoltage, plotShapeLPS, plotShapeIL1b
+    
+    // Statistics file
+    objref fileIL1bResults
+    
+    
+    proc init() {
+        biophysJsonFileNameOrEmpty = "SimIL1b.json"
+        isCustomProcAdvance = 1
+        isAltRunControl = 1
+        
+        outTxtFileRelPathName = "Text results/IL1b_dynamics.txt"
+        
+        fileIL1bResults = new File()
+    }
+    
+    func preShowCheck() {
+        return 0
+    }
+    
+    // Opens IL-1β simulation window.
+    proc show() {
+        initParamsIL1b()
+        seClampHelper.deployClamp(0)
+        showIL1bUi()
+    }
+    
+    // Updates LPS stimulation values on the cell.
+    proc advance() {
+        fadvance()
+        IL1bIteration(PX, PY, R_STIM, TimeBegin, Tau1, MaxLPS, PX2, LPSSensitivity, Tau2, PZ)
+        graphSEClamp.exec_menu("View = plot")
+        graphLPS.exec_menu("View = plot")
+        graphIL1bConc.exec_menu("View = plot")
+        graphProIL1b.exec_menu("View = plot")
+        graphMatureIL1b.exec_menu("View = plot")
+        graphInflammasome.exec_menu("View = plot")
+        graphIL10.exec_menu("View = plot")
+        graphTGFb.exec_menu("View = plot")
+        graphTNFa.exec_menu("View = plot")
+        plotShapeLPS.exec_menu("View = plot")
+        
+        // Write data to file: time, LPS, Pro-IL1b, Mature IL1b, Inflammasome, IL10, TGFb, TNFa
+        fileIL1bResults.printf("%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\n", t, dendrite_ref.o(0).sec.lps_stim_IL1b(0.5), dendrite_ref.o(0).sec.il1b_pro_IL1b(0.5), dendrite_ref.o(0).sec.il1b_mature_IL1b(0.5), dendrite_ref.o(0).sec.inflammasome_active_IL1b(0.5), dendrite_ref.o(0).sec.il10_conc_IL1b(0.5), dendrite_ref.o(0).sec.tgfb_conc_IL1b(0.5), dendrite_ref.o(0).sec.tnfa_conc_IL1b(0.5))
+    }
+    
+    proc preRun() {
+        fileIL1bResults.wopen(outTxtFileRelPathName)
+    }
+    
+    proc preContinue() {
+        fileIL1bResults.aopen(outTxtFileRelPathName)
+    }
+    
+    proc postRun() {
+        fileIL1bResults.close()
+        print "IL-1β results saved to: ", outTxtFileRelPathName
+    }
+    
+    proc simDismissHandler() {
+        
+        removeItemFromList(graphList[1], graphLPS)
+        removeItemFromList(graphList[1], graphSEClamp)
+        removeItemFromList(graphList[1], graphIL1bConc)
+        removeItemFromList(graphList[1], graphProIL1b)
+        removeItemFromList(graphList[1], graphMatureIL1b)
+        removeItemFromList(graphList[1], graphInflammasome)
+        removeItemFromList(graphList[1], graphIL10)
+        removeItemFromList(graphList[1], graphTGFb)
+        removeItemFromList(graphList[1], graphTNFa)
+        removeItemFromList(fast_flush_list, plotShapeLPS)
+        removeItemFromList(fast_flush_list, plotShapeVoltage)
+        removeItemFromList(fast_flush_list, plotShapeIL1b)
+        
+        unmapIfNotNil(vBoxIL1bMain)
+        unmapIfNotNil(vBoxGraphSEClamp)
+        unmapIfNotNil(vBoxGraphLPS)
+        unmapIfNotNil(vBoxGraphIL1bConc)
+        unmapIfNotNil(vBoxGraphProIL1b)
+        unmapIfNotNil(vBoxGraphMatureIL1b)
+        unmapIfNotNil(vBoxGraphInflammasome)
+        unmapIfNotNil(vBoxGraphIL10)
+        unmapIfNotNil(vBoxGraphTGFb)
+        unmapIfNotNil(vBoxGraphTNFa)
+        unmapIfNotNil(vBoxPlotShapeVoltage)
+        unmapIfNotNil(vBoxPlotShapeLPS)
+        unmapIfNotNil(vBoxPlotShapeIL1b)
+        
+        seClampHelper.removeClamp()
+    }
+    
+    // All next staff is private
+    
+    
+    // Sets initial UI and simulation parameters.
+    proc initParamsIL1b() {
+        // Parameter of IL-1β/LPS stimulation - optimized for microglial response
+        PX = 0                // X- Coordinate of the stimulation site
+        PY = -20              // Y - coordinate of the stimulation site  
+        PZ = 0                // Z - coordinate of the stimulation site
+        PX2 = 0               // Distance in x-coordinate of another stimulation site
+        R_STIM = 5.0          // Radius of LPS stimulation
+        TimeBegin = 5         // Time of stimulation onset
+        Tau1 = 1              // Rise time of LPS application
+        Tau2 = 20             // Decay time of LPS application
+        MaxLPS = 100          // Maximum LPS concentration in ng/ml
+        LPSSensitivity = 0.12 // LPS sensitivity parameter (slightly higher for IL-1β)
+
+        forall {
+            if (ismembrane("IL1b")) {
+                // Intracellular calcium concentration (mM)
+                cai = 0.0001   // Calcium inside (basal level)
+                
+                // Use enhanced physiologically realistic parameters
+                lps_sensitivity_IL1b = 0.12
+                ca_threshold_IL1b = 0.00008
+                max_production_IL1b = 12.0
+                
+                // Initialize feedback mechanisms
+                il10_inhibition_strength_IL1b = 0.6
+                tgfb_inhibition_strength_IL1b = 0.5
+                tau_il10_IL1b = 55
+                tau_tgfb_IL1b = 210
+                
+                // Initialize TNFα activation
+                tnfa_activation_factor_IL1b = 0.8
+                tnfa_activation_k50_IL1b = 3.0
+                
+                // Initialize receptor parameters
+                il1r1_expression_IL1b = 1.0
+                il1r2_expression_IL1b = 0.3
+                
+                // Initialize inflammasome parameters
+                inflammasome_threshold_IL1b = 0.15
+                caspase1_activity_IL1b = 1.0
+                processing_rate_IL1b = 0.12
+            }
+        }
+    }
+    
+    // Shows IL-1β simulation UI.
+    proc showIL1bUi() {
+        vBoxIL1bMain = new VBox()
+        vBoxIL1bMain.intercept(1)
+        {
+            xpanel("")
+            xlabel("==================  IL1b/LPS Microglial Stimulation ==================")
+            xlabel("Includes: TNFa activation, Inflammasome (NLRP3), Feedback inhibition (IL10, TGFβ)")
+            xlabel("         Receptor dynamics (IL-1R1/R2), NFκB pathway, Pro-IL1b processing")
+            xlabel("===============================================================================")
+            xpvalue("X coordinate (um)", &PX, 1)
+            xpvalue("Y coordinate (um)", &PY, 1)
+            xpvalue("Z coordinate (um)", &PZ, 1)
+            xpvalue("Stimulation radius (um)", &R_STIM, 1)
+            xpvalue("Stimulation onset (ms)", &TimeBegin, 1)
+            xpvalue("Maximum LPS (ng/ml)", &MaxLPS, 1)
+            xpvalue("Distance between two stimulation sites (um)", &PX2, 1)
+            xpvalue("LPS sensitivity", &LPSSensitivity, 1)
+            xpvalue("Tau rise (ms)", &Tau1, 1)
+            xpvalue("Tau decay (ms)", &Tau2, 1)
+            xlabel("===============================================================================")
+            xpanel(625,164)
+            
+            xpanel("")
+            xlabel("================== Voltage clamp of soma==================")
+            xpvalue("Somatic voltage clamp", &seClampHelper.seClamp.amp1, 1)
+            xpvalue("Clamp duration", &seClampHelper.seClamp.dur1, 1)
+            xlabel("----------------------------------------------------------------------------------------------------------")
+            xpvalue("Simulation time (ms)", &tstop, 1)
+            xbutton("Run simulation", "altRunControlWidget.initAndRunHandler()")
+            xpanel(328,129)
+        }
+        vBoxIL1bMain.intercept(0)
+        vBoxIL1bMain.map("IL1b settings", 195, 102, 350, 600)
+        
+        vBoxGraphSEClamp = new VBox()
+        vBoxGraphSEClamp.intercept(1)
+        {
+            graphSEClamp = new Graph(0)
+            graphList[1].append(graphSEClamp)
+            graphSEClamp.size(0,150,-0.015,-5.82077e-010)
+            graphSEClamp.view(0, -0.015, 150, 0.015, 50, 705, 380, 200)
+            graphSEClamp.addexpr("seClampHelper.seClamp.i", 1, 1, 0.8, 0.9, 2)
+            graphSEClamp.yaxis(0)
+            graphSEClamp.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphSEClamp.label(0.1, 0.09, "Clamp current (nA)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphSEClamp.intercept(0)
+        vBoxGraphSEClamp.map("SE Clamp Current vs Time", 50, 705, 380, 200)
+
+        vBoxGraphLPS = new VBox()
+        vBoxGraphLPS.intercept(1)
+        {
+            graphLPS = new Graph(0)
+            graphList[1].append(graphLPS)
+            graphLPS.size(0,150,-3.49246e-010,0.0101)
+            graphLPS.view(0, -5, 150, 105, 440, 705, 380, 200)
+            graphLPS.addvar("dendrite_ref.o(0).sec.lps_stim_IL1b( 0.5 )", 1, 1, 0.8, 0.9, 2)
+            graphLPS.yaxis(0)
+            graphLPS.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphLPS.label(0.1, 0.09, "Applied LPS (ng/ml)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphLPS.intercept(0)
+        vBoxGraphLPS.map("LPS Profile", 440, 705, 380, 200)
+
+        // Total IL-1β Concentration Graph
+        vBoxGraphIL1bConc = new VBox()
+        vBoxGraphIL1bConc.intercept(1)
+        {
+            graphIL1bConc = new Graph(0)
+            graphList[1].append(graphIL1bConc)
+            graphIL1bConc.size(0,150,-0.01,0.01)
+            graphIL1bConc.view(0, -0.5, 150, 12, 830, 705, 380, 200)
+            graphIL1bConc.addvar("dendrite_ref.o(0).sec.il1b_conc_IL1b( 0.5 )", 1, 1, 0.8, 0.9, 2)
+            graphIL1bConc.yaxis(0)
+            graphIL1bConc.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphIL1bConc.label(0.1, 0.09, "Total IL1b (pg/ml)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphIL1bConc.intercept(0)
+        vBoxGraphIL1bConc.map("Total IL1b Concentration vs Time", 830, 705, 380, 200)
+        
+        // Pro-IL-1β Graph
+        vBoxGraphProIL1b = new VBox()
+        vBoxGraphProIL1b.intercept(1)
+        {
+            graphProIL1b = new Graph(0)
+            graphList[1].append(graphProIL1b)
+            graphProIL1b.size(0,150,-0.01,0.01)
+            graphProIL1b.view(0, 0, 150, 8, 1220, 705, 380, 200)
+            graphProIL1b.addvar("dendrite_ref.o(0).sec.il1b_pro_IL1b( 0.5 )", 4, 1, 0.8, 0.9, 2)
+            graphProIL1b.yaxis(0)
+            graphProIL1b.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphProIL1b.label(0.1, 0.09, "Pro IL1b (immature)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphProIL1b.intercept(0)
+        vBoxGraphProIL1b.map("Pro IL1b vs Time", 1220, 705, 380, 200)
+
+        // Mature IL-1β Graph
+        vBoxGraphMatureIL1b = new VBox()
+        vBoxGraphMatureIL1b.intercept(1)
+        {
+            graphMatureIL1b = new Graph(0)
+            graphList[1].append(graphMatureIL1b)
+            graphMatureIL1b.size(0,150,-0.01,0.01)
+            graphMatureIL1b.view(0, 0, 150, 6, 1610, 705, 380, 200)
+            graphMatureIL1b.addvar("dendrite_ref.o(0).sec.il1b_mature_IL1b( 0.5 )", 2, 1, 0.8, 0.9, 2)
+            graphMatureIL1b.yaxis(0)
+            graphMatureIL1b.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphMatureIL1b.label(0.1, 0.09, "Mature IL1b (active)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphMatureIL1b.intercept(0)
+        vBoxGraphMatureIL1b.map("Mature IL1b vs Time", 1610, 705, 380, 200)
+
+        // Inflammasome Activation Graph
+        vBoxGraphInflammasome = new VBox()
+        vBoxGraphInflammasome.intercept(1)
+        {
+            graphInflammasome = new Graph(0)
+            graphList[1].append(graphInflammasome)
+            graphInflammasome.size(0,150,-0.01,0.01)
+            graphInflammasome.view(0, 0, 150, 1, 2000, 705, 380, 200)
+            graphInflammasome.addvar("dendrite_ref.o(0).sec.inflammasome_active_IL1b( 0.5 )", 6, 1, 0.8, 0.9, 2)
+            graphInflammasome.yaxis(0)
+            graphInflammasome.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphInflammasome.label(0.1, 0.09, "Inflammasome (NLRP3)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphInflammasome.intercept(0)
+        vBoxGraphInflammasome.map("Inflammasome Activation vs Time", 2000, 705, 380, 200)
+        
+        // IL-10 Graph (Fast Feedback)
+        vBoxGraphIL10 = new VBox()
+        vBoxGraphIL10.intercept(1)
+        {
+            graphIL10 = new Graph(0)
+            graphList[1].append(graphIL10)
+            graphIL10.size(0,150,-0.01,0.01)
+            graphIL10.view(0, 0, 150, 4, 50, 102, 380, 200)
+            graphIL10.addvar("dendrite_ref.o(0).sec.il10_conc_IL1b( 0.5 )", 2, 1, 0.8, 0.9, 2)
+            graphIL10.yaxis(0)
+            graphIL10.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphIL10.label(0.1, 0.09, "IL10 (Fast Feedback)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphIL10.intercept(0)
+        vBoxGraphIL10.map("IL10 Concentration vs Time", 50, 102, 380, 200)
+
+        // TGFβ Graph (Slow Feedback)
+        vBoxGraphTGFb = new VBox()
+        vBoxGraphTGFb.intercept(1)
+        {
+            graphTGFb = new Graph(0)
+            graphList[1].append(graphTGFb)
+            graphTGFb.size(0,150,-0.01,0.01)
+            graphTGFb.view(0, 0, 150, 4, 440, 102, 380, 200)
+            graphTGFb.addvar("dendrite_ref.o(0).sec.tgfb_conc_IL1b( 0.5 )", 3, 1, 0.8, 0.9, 2)
+            graphTGFb.yaxis(0)
+            graphTGFb.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphTGFb.label(0.1, 0.09, "TGFb (Slow Feedback)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphTGFb.intercept(0)
+        vBoxGraphTGFb.map("TGFb Concentration vs Time", 440, 102, 380, 200)
+
+        // TNFα Graph (Activator)
+        vBoxGraphTNFa = new VBox()
+        vBoxGraphTNFa.intercept(1)
+        {
+            graphTNFa = new Graph(0)
+            graphList[1].append(graphTNFa)
+            graphTNFa.size(0,150,-0.01,0.01)
+            graphTNFa.view(0, 0, 150, 2, 830, 102, 380, 200)
+            graphTNFa.addvar("dendrite_ref.o(0).sec.tnfa_conc_IL1b( 0.5 )", 5, 1, 0.8, 0.9, 2)
+            graphTNFa.yaxis(0)
+            graphTNFa.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphTNFa.label(0.1, 0.09, "TNFa (Activator)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphTNFa.intercept(0)
+        vBoxGraphTNFa.map("TNFa Concentration vs Time", 830, 102, 380, 200)
+        
+        vBoxPlotShapeLPS = new VBox()
+        vBoxPlotShapeLPS.intercept(1)
+        {
+            plotShapeLPS = new PlotShape(0)
+            fast_flush_list.append(plotShapeLPS)
+            plotShapeLPS.size(-50,50,-50,50)
+            plotShapeLPS.view(-50, -49.9003, 100, 100, 1220, 102, 380, 380)
+            plotShapeLPS.exec_menu("Shape Plot")
+            plotShapeLPS.exec_menu("View = plot")
+            plotShapeLPS.variable("lps_stim_IL1b")
+            plotShapeLPS.label(0.5, 0.09, "Applied LPS (ng/ml)", 2, 1, 0, 1, 1)
+            plotShapeLPS.show(0)
+            plotShapeLPS.scale(0,100)
+        }
+        vBoxPlotShapeLPS.intercept(0)
+        vBoxPlotShapeLPS.map("LPS Distribution", 1220, 102, 380, 380)
+        
+        vBoxPlotShapeVoltage = new VBox()
+        vBoxPlotShapeVoltage.intercept(1)
+        {
+            plotShapeVoltage = new PlotShape(0)
+            fast_flush_list.append(plotShapeVoltage)
+            plotShapeVoltage.size(-50,50,-50,50)
+            plotShapeVoltage.view(-50, -49.9003, 100, 100, 1610, 102, 380, 380)
+            plotShapeVoltage.exec_menu("Shape Plot")
+            plotShapeVoltage.exec_menu("View = plot")
+            plotShapeVoltage.variable("v")
+            plotShapeVoltage.label(0.1, 0.99, "Transmembrane Voltage (mV)", 2, 1, 0, 1, 1)
+            plotShapeVoltage.show(0)
+            plotShapeVoltage.scale(-50, 50)
+        }
+        vBoxPlotShapeVoltage.intercept(0)
+        vBoxPlotShapeVoltage.map("Voltage", 1610, 102, 380, 380)
+        
+        vBoxPlotShapeIL1b = new VBox()
+        vBoxPlotShapeIL1b.intercept(1)
+        {
+            plotShapeIL1b = new PlotShape(0)
+            fast_flush_list.append(plotShapeIL1b)
+            plotShapeIL1b.size(-50,50,-50,50)
+            plotShapeIL1b.view(-50, -49.9003, 100, 100, 2000, 102, 380, 380)
+            plotShapeIL1b.exec_menu("Shape Plot")
+            plotShapeIL1b.exec_menu("View = plot")
+            plotShapeIL1b.variable("il1b_mature_IL1b")
+            plotShapeIL1b.label(0.15, 0.99, "Mature IL1b (pg/ml)", 2, 1, 0, 1, 1)
+            plotShapeIL1b.show(0)
+            plotShapeIL1b.scale(0,10)
+        }
+        vBoxPlotShapeIL1b.intercept(0)
+        vBoxPlotShapeIL1b.map("Mature IL1b Concentration", 2000, 102, 380, 380)
+    }
+    
+endtemplate SimIL1b
+
+
+// Updates IL-1β LPS stimulation on the cell.
+// $1 - X coordinate circle center
+// $2 - Y coordinate circle center  
+// $3 - Radius of stimulation area
+// $4 - TimeBegin
+// $5 - Time of LPS rise
+// $6 - Maximum LPS (ng/ml)
+// $7 - PX2 (second stimulation site offset)
+// $8 - LPS sensitivity
+// $9 - Time decay
+// $10 - Z coordinate circle center
+proc IL1bIteration() { local tau1, tau2, BaselineLPS, dist_sq1, dist_sq2, z_diff, lps_profile
+    tau1 = $5
+    tau2 = $9
+    BaselineLPS = 0
+    
+    forall {
+        // Check if the section has the IL1b mechanism
+        if (ismembrane("IL1b")) {
+            // Calculate distances
+            dist_sq1 = dist2D_PtToPt_squared($1, $2, x3d(1), y3d(1))
+            dist_sq2 = dist2D_PtToPt_squared($1+$7, $2, x3d(1), y3d(1))
+            z_diff = abs($10-z3d(1))
+            
+            // Check if within stimulation area
+            if (((dist_sq1 < $3^2) || (dist_sq2 < $3^2)) && (z_diff < 10) && (t > $4)) {
+                // Apply LPS with double exponential
+                if (tau2 != tau1) {
+                    lps_profile = BaselineLPS + $6*(tau2/(tau2-tau1)*(-exp(-(t-$4)/tau1) + exp(-(t-$4)/tau2)))
+                } else {
+                    lps_profile = BaselineLPS + $6*((t-$4)/tau1)*exp(-(t-$4)/tau1)
+                }
+                
+                // Apply threshold
+                if (lps_profile > lps_threshold_IL1b) {
+                    lps_stim_IL1b = lps_profile
+                } else {
+                    lps_stim_IL1b = 0
+                }
+            } else {
+                lps_stim_IL1b = BaselineLPS
+            }
+            
+            lps_sensitivity_IL1b = $8
+        }
+    }
+}

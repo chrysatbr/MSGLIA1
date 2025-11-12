@@ -1,0 +1,373 @@
+// Forward declaration - will be implemented at the bottom
+proc IL6Iteration() { }
+
+// Simple 2D distance calculation utility
+objref geomMath
+geomMath = new List()
+
+// Distance calculation function
+func dist2D_PtToPt_squared() {
+    return ($1-$3)*($1-$3) + ($2-$4)*($2-$4)
+}
+
+begintemplate SimIL6
+    
+    public preShowCheck, show, preRun, preContinue, advance, postRun, simDismissHandler
+    public biophysJsonFileNameOrEmpty, isCustomProcAdvance, isAltRunControl
+    
+    // Just a workaround to avoid the error in GraphUtils.parseVarsFromTheGraph
+    public PX, PY, PZ, R_STIM, TimeBegin, MaxLPS, PX2, LPSSensitivity, Tau1, Tau2
+    
+    external IL6Iteration
+    external seClampHelper
+    external altRunControlWidget
+    external tstop
+    external removeItemFromList, unmapIfNotNil
+    external dendrite_ref
+    external graphList, fast_flush_list
+    
+    strdef biophysJsonFileNameOrEmpty
+    isCustomProcAdvance = -1
+    isAltRunControl = -1
+    strdef outTxtFileRelPathName
+
+	
+    
+    // UI - Enhanced with additional graphs for IL-6 signaling pathways
+    objref vBoxIL6Main, vBoxGraphSEClamp, vBoxGraphLPS, vBoxGraphIL6Conc
+    objref vBoxGraphIL10, vBoxGraphSTAT3
+    objref vBoxPlotShapeVoltage, vBoxPlotShapeLPS, vBoxPlotShapeIL6
+    objref graphSEClamp, graphLPS, graphIL6Conc, graphIL10, graphSTAT3
+    objref plotShapeVoltage, plotShapeLPS, plotShapeIL6
+    
+    // Statistics file
+    objref fileIL6Results
+    
+    
+    proc init() {
+        biophysJsonFileNameOrEmpty = "SimIL6.json"
+        isCustomProcAdvance = 1
+        isAltRunControl = 1
+        
+        outTxtFileRelPathName = "Text results/IL6_dynamics.txt"
+        
+        fileIL6Results = new File()
+    }
+    
+    func preShowCheck() {
+        return 0
+    }
+    
+    // Opens IL6 simulation window.
+    proc show() {
+        initParamsIL6()
+        seClampHelper.deployClamp(0)
+        showIL6Ui()
+    }
+    
+    // Updates LPS stimulation values on the cell.
+    proc advance() {
+        fadvance()
+        IL6Iteration(PX, PY, R_STIM, TimeBegin, Tau1, MaxLPS, PX2, LPSSensitivity, Tau2, PZ)
+        graphSEClamp.exec_menu("View = plot")
+        graphLPS.exec_menu("View = plot")
+        graphIL6Conc.exec_menu("View = plot")
+        graphIL10.exec_menu("View = plot")
+        graphSTAT3.exec_menu("View = plot")
+        plotShapeLPS.exec_menu("View = plot")
+        
+        // Write data to file: time, LPS, IL-6, IL-10, STAT3
+        fileIL6Results.printf("%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\n", t, dendrite_ref.o(0).sec.lps_stim_IL6(0.5), dendrite_ref.o(0).sec.il6_conc_IL6(0.5), dendrite_ref.o(0).sec.il10_conc_IL6(0.5), dendrite_ref.o(0).sec.stat3_active_IL6(0.5))
+    }
+    
+    proc preRun() {
+        fileIL6Results.wopen(outTxtFileRelPathName)
+    }
+    
+    proc preContinue() {
+        fileIL6Results.aopen(outTxtFileRelPathName)
+    }
+    
+    proc postRun() {
+        fileIL6Results.close()
+        print "IL-6 results saved to: ", outTxtFileRelPathName
+    }
+    
+    proc simDismissHandler() {
+        
+        removeItemFromList(graphList[1], graphLPS)
+        removeItemFromList(graphList[1], graphSEClamp)
+        removeItemFromList(graphList[1], graphIL6Conc)
+        removeItemFromList(graphList[1], graphIL10)
+        removeItemFromList(graphList[1], graphSTAT3)
+        removeItemFromList(fast_flush_list, plotShapeLPS)
+        removeItemFromList(fast_flush_list, plotShapeVoltage)
+        removeItemFromList(fast_flush_list, plotShapeIL6)
+        
+        unmapIfNotNil(vBoxIL6Main)
+        unmapIfNotNil(vBoxGraphSEClamp)
+        unmapIfNotNil(vBoxGraphLPS)
+        unmapIfNotNil(vBoxGraphIL6Conc)
+        unmapIfNotNil(vBoxGraphIL10)
+        unmapIfNotNil(vBoxGraphSTAT3)
+        unmapIfNotNil(vBoxPlotShapeVoltage)
+        unmapIfNotNil(vBoxPlotShapeLPS)
+        unmapIfNotNil(vBoxPlotShapeIL6)
+        
+        seClampHelper.removeClamp()
+    }
+    
+    // All next staff is private
+    
+    
+    // Sets initial UI and simulation parameters.
+    proc initParamsIL6() {
+        // Parameter of IL-6/LPS stimulation - optimized for microglial response
+        PX = 0                // X- Coordinate of the stimulation site
+        PY = -20              // Y - coordinate of the stimulation site  
+        PZ = 0                // Z - coordinate of the stimulation site
+        PX2 = 0               // Distance in x-coordinate of another stimulation site
+        R_STIM = 5.0          // Radius of LPS stimulation
+        TimeBegin = 5         // Time of stimulation onset
+        Tau1 = 1              // Rise time of LPS application
+        Tau2 = 20             // Decay time of LPS application
+        MaxLPS = 100          // Maximum LPS concentration in ng/ml
+        LPSSensitivity = 0.1  // LPS sensitivity parameter
+
+        forall {
+            if (ismembrane("IL6")) {
+                // Intracellular calcium concentration (mM)
+                cai = 0.0001   // Calcium inside (basal level)
+                
+                // Use enhanced physiologically realistic parameters
+                lps_sensitivity_IL6 = 0.1
+                ca_threshold_IL6 = 0.0001
+                max_production_IL6 = 8.0
+                
+                // Initialize IL-10 production parameters
+                il10_production_factor_IL6 = 0.4
+                tau_il10_IL6 = 50
+                
+                // Initialize receptor parameters
+                il6r_expression_IL6 = 1.0
+                gp130_expression_IL6 = 1.2
+            }
+        }
+    }
+    
+    // Shows IL6 simulation UI.
+    proc showIL6Ui() {
+        vBoxIL6Main = new VBox()
+        vBoxIL6Main.intercept(1)
+        {
+            xpanel("")
+            xlabel("================== IL-6/LPS Microglial Stimulation ==================")
+            xlabel("Includes: IL-10 activation, Receptor dynamics (IL-6R/gp130)")
+            xlabel("                STAT3 pathway, and Autocrine regulation")
+            xlabel("==============================================================================")
+            xpvalue("X coordinate (um)", &PX, 1)
+            xpvalue("Y coordinate (um)", &PY, 1)
+            xpvalue("Z coordinate (um)", &PZ, 1)
+            xpvalue("Stimulation radius (um)", &R_STIM, 1)
+            xpvalue("Stimulation onset (ms)", &TimeBegin, 1)
+            xpvalue("Maximum LPS (ng/ml)", &MaxLPS, 1)
+            xpvalue("Distance between two stimulation sites (um)", &PX2, 1)
+            xpvalue("LPS sensitivity", &LPSSensitivity, 1)
+            xpvalue("Tau rise (ms)", &Tau1, 1)
+            xpvalue("Tau decay (ms)", &Tau2, 1)
+            xlabel("==============================================================================")
+            xpanel(625,164)
+            
+            xpanel("")
+            xlabel("================== Voltage clamp of soma==================")
+            xpvalue("Somatic voltage clamp", &seClampHelper.seClamp.amp1, 1)
+            xpvalue("Clamp duration", &seClampHelper.seClamp.dur1, 1)
+            xlabel("----------------------------------------------------------------------------------------------------------")
+            xpvalue("Simulation time (ms)", &tstop, 1)
+            xbutton("Run simulation", "altRunControlWidget.initAndRunHandler()")
+            xpanel(328,129)
+        }
+        vBoxIL6Main.intercept(0)
+        vBoxIL6Main.map("IL-6 settings", 195, 102, 350, 580)
+        
+        vBoxGraphSEClamp = new VBox()
+        vBoxGraphSEClamp.intercept(1)
+        {
+            graphSEClamp = new Graph(0)
+            graphList[1].append(graphSEClamp)
+            graphSEClamp.size(0,150,-0.015,-5.82077e-010)
+            graphSEClamp.view(0, -0.015, 150, 0.015, 50, 705, 380, 200)
+            graphSEClamp.addexpr("seClampHelper.seClamp.i", 1, 1, 0.8, 0.9, 2)
+            graphSEClamp.yaxis(0)
+            graphSEClamp.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphSEClamp.label(0.1, 0.09, "Clamp current (nA)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphSEClamp.intercept(0)
+        vBoxGraphSEClamp.map("SE Clamp Current vs Time", 50, 705, 380, 200)
+
+        vBoxGraphLPS = new VBox()
+        vBoxGraphLPS.intercept(1)
+        {
+            graphLPS = new Graph(0)
+            graphList[1].append(graphLPS)
+            graphLPS.size(0,150,-3.49246e-010,0.0101)
+            graphLPS.view(0, -5, 150, 105, 440, 705, 380, 200)
+            graphLPS.addvar("dendrite_ref.o(0).sec.lps_stim_IL6( 0.5 )", 1, 1, 0.8, 0.9, 2)
+            graphLPS.yaxis(0)
+            graphLPS.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphLPS.label(0.1, 0.09, "Applied LPS (ng/ml)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphLPS.intercept(0)
+        vBoxGraphLPS.map("LPS Profile", 440, 705, 380, 200)
+
+        // IL-6 Concentration Graph
+        vBoxGraphIL6Conc = new VBox()
+        vBoxGraphIL6Conc.intercept(1)
+        {
+            graphIL6Conc = new Graph(0)
+            graphList[1].append(graphIL6Conc)
+            graphIL6Conc.size(0,150,-0.01,0.01)
+            graphIL6Conc.view(0, -0.5, 150, 9, 830, 705, 380, 200)
+            graphIL6Conc.addvar("dendrite_ref.o(0).sec.il6_conc_IL6( 0.5 )", 1, 1, 0.8, 0.9, 2)
+            graphIL6Conc.yaxis(0)
+            graphIL6Conc.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphIL6Conc.label(0.1, 0.09, "IL-6 Concentration (pg/ml)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphIL6Conc.intercept(0)
+        vBoxGraphIL6Conc.map("IL-6 Concentration vs Time", 830, 705, 380, 200)
+        
+        // IL-10 Concentration Graph (Anti-inflammatory response)
+        vBoxGraphIL10 = new VBox()
+        vBoxGraphIL10.intercept(1)
+        {
+            graphIL10 = new Graph(0)
+            graphList[1].append(graphIL10)
+            graphIL10.size(0,150,-0.01,0.01)
+            graphIL10.view(0, 0, 150, 4, 1220, 705, 380, 200)
+            graphIL10.addvar("dendrite_ref.o(0).sec.il10_conc_IL6( 0.5 )", 2, 1, 0.8, 0.9, 2)
+            graphIL10.yaxis(0)
+            graphIL10.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphIL10.label(0.1, 0.09, "IL-10 (Anti-inflammatory)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphIL10.intercept(0)
+        vBoxGraphIL10.map("IL-10 Concentration vs Time", 1220, 705, 380, 200)
+
+        // STAT3 Activation Graph
+        vBoxGraphSTAT3 = new VBox()
+        vBoxGraphSTAT3.intercept(1)
+        {
+            graphSTAT3 = new Graph(0)
+            graphList[1].append(graphSTAT3)
+            graphSTAT3.size(0,150,-0.01,0.01)
+            graphSTAT3.view(0, 0, 150, 1, 1610, 705, 380, 200)
+            graphSTAT3.addvar("dendrite_ref.o(0).sec.stat3_active_IL6( 0.5 )", 5, 1, 0.8, 0.9, 2)
+            graphSTAT3.yaxis(0)
+            graphSTAT3.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphSTAT3.label(0.1, 0.09, "STAT3 Activation", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphSTAT3.intercept(0)
+        vBoxGraphSTAT3.map("STAT3 Activation vs Time", 1610, 705, 380, 200)
+        
+        vBoxPlotShapeLPS = new VBox()
+        vBoxPlotShapeLPS.intercept(1)
+        {
+            plotShapeLPS = new PlotShape(0)
+            fast_flush_list.append(plotShapeLPS)
+            plotShapeLPS.size(-50,50,-50,50)
+            plotShapeLPS.view(-50, -49.9003, 100, 100, 50, 102, 380, 380)
+            plotShapeLPS.exec_menu("Shape Plot")
+            plotShapeLPS.exec_menu("View = plot")
+            plotShapeLPS.variable("lps_stim_IL6")
+            plotShapeLPS.label(0.5, 0.09, "Applied LPS (ng/ml)", 2, 1, 0, 1, 1)
+            plotShapeLPS.show(0)
+            plotShapeLPS.scale(0,100)
+        }
+        vBoxPlotShapeLPS.intercept(0)
+        vBoxPlotShapeLPS.map("LPS Distribution", 50, 102, 380, 380)
+        
+        vBoxPlotShapeVoltage = new VBox()
+        vBoxPlotShapeVoltage.intercept(1)
+        {
+            plotShapeVoltage = new PlotShape(0)
+            fast_flush_list.append(plotShapeVoltage)
+            plotShapeVoltage.size(-50,50,-50,50)
+            plotShapeVoltage.view(-50, -49.9003, 100, 100, 440, 102, 380, 380)
+            plotShapeVoltage.exec_menu("Shape Plot")
+            plotShapeVoltage.exec_menu("View = plot")
+            plotShapeVoltage.variable("v")
+            plotShapeVoltage.label(0.1, 0.99, "Transmembrane Voltage (mV)", 2, 1, 0, 1, 1)
+            plotShapeVoltage.show(0)
+            plotShapeVoltage.scale(-50, 50)
+        }
+        vBoxPlotShapeVoltage.intercept(0)
+        vBoxPlotShapeVoltage.map("Voltage", 440, 102, 380, 380)
+        
+        vBoxPlotShapeIL6 = new VBox()
+        vBoxPlotShapeIL6.intercept(1)
+        {
+            plotShapeIL6 = new PlotShape(0)
+            fast_flush_list.append(plotShapeIL6)
+            plotShapeIL6.size(-50,50,-50,50)
+            plotShapeIL6.view(-50, -49.9003, 100, 100, 830, 102, 380, 380)
+            plotShapeIL6.exec_menu("Shape Plot")
+            plotShapeIL6.exec_menu("View = plot")
+            plotShapeIL6.variable("il6_conc_IL6")
+            plotShapeIL6.label(0.15, 0.99, "IL-6 (pg/ml)", 2, 1, 0, 1, 1)
+            plotShapeIL6.show(0)
+            plotShapeIL6.scale(0,8)
+        }
+        vBoxPlotShapeIL6.intercept(0)
+        vBoxPlotShapeIL6.map("IL-6 Concentration", 830, 102, 380, 380)
+    }
+    
+endtemplate SimIL6
+
+
+// Updates IL-6 LPS stimulation on the cell.
+// $1 - X coordinate circle center
+// $2 - Y coordinate circle center  
+// $3 - Radius of stimulation area
+// $4 - TimeBegin
+// $5 - Time of LPS rise
+// $6 - Maximum LPS (ng/ml)
+// $7 - PX2 (second stimulation site offset)
+// $8 - LPS sensitivity
+// $9 - Time decay
+// $10 - Z coordinate circle center
+// Updates IL-6 LPS stimulation on the cell.
+proc IL6Iteration() { local tau1, tau2, BaselineLPS, dist_sq1, dist_sq2, z_diff, lps_profile
+    tau1 = $5
+    tau2 = $9
+    BaselineLPS = 0
+    
+    forall {
+        // Check if the section has the IL6 mechanism
+        if (ismembrane("IL6")) {
+            // Calculate distances
+            dist_sq1 = dist2D_PtToPt_squared($1, $2, x3d(1), y3d(1))
+            dist_sq2 = dist2D_PtToPt_squared($1+$7, $2, x3d(1), y3d(1))
+            z_diff = abs($10-z3d(1))
+            
+            // Check if within stimulation area
+            if (((dist_sq1 < $3^2) || (dist_sq2 < $3^2)) && (z_diff < 10) && (t > $4)) {
+                // Apply LPS with double exponential
+                if (tau2 != tau1) {
+                    lps_profile = BaselineLPS + $6*(tau2/(tau2-tau1)*(-exp(-(t-$4)/tau1) + exp(-(t-$4)/tau2)))
+                } else {
+                    lps_profile = BaselineLPS + $6*((t-$4)/tau1)*exp(-(t-$4)/tau1)
+                }
+                
+                // Apply threshold
+                if (lps_profile > lps_threshold_IL6) {
+                    lps_stim_IL6 = lps_profile
+                } else {
+                    lps_stim_IL6 = 0
+                }
+            } else {
+                lps_stim_IL6 = BaselineLPS
+            }
+            
+            lps_sensitivity_IL6 = $8
+        }
+    }
+}

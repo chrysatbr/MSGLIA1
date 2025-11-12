@@ -1,0 +1,350 @@
+// SimPiezo1Mechanotransduction.hoc
+// Main simulation framework for PIEZO1 mechanotransduction visualization
+// Adapted from SimOutsideInDiffusion.hoc for mechanical force dynamics
+
+{ load_file("ForceApplicationInfo.hoc") }
+{ load_file("ForceLibrary.hoc") }
+{ load_file("ForceManagerWidget.hoc") }
+{ load_file("../../../Extracellular/Common/RangeVarHistory/RangeVarHistoryLoads.hoc") }
+
+begintemplate SimPiezo1Mechanotransduction
+    
+    public preShowCheck, show, preRun, preContinue, advance, postRun, dismissNeuronPlayerWidget, simDismissHandler
+    public biophysJsonFileNameOrEmpty, isCustomProcAdvance, isAltRunControl
+    
+    // Public parameters for UI
+    public numForceSites, radiusGen, recorder, forceInterval
+    
+    external unmapIfNotNil, dismissIfNotNil
+    external mwh, math, geomMath, compUtils, beih, rngUtils
+    external manageAndRunWidget, altRunControlWidget, lastUsedGridToWatchWidget
+    external setdt, runStopAt, runStopIn, tstop, steps_per_ms
+    external pyObj, enumBinFileTypes
+    external forceLibrary
+    
+    strdef biophysJsonFileNameOrEmpty
+    isCustomProcAdvance = -1
+    isAltRunControl = -1
+    
+    objref rng
+    objref mainBox, createOrLoadDeck
+    objref gridToWatchWidget, animSettingsWidget, neuronPlayerWidget
+    objref gridRegion, forceManagerWidget
+    objref record, recorder, player
+    
+    isBinFileLoaded = -1
+    isCreateOrLoad = -1
+    numForceSites = -1
+    radiusGen = -1
+    forceInterval = -1
+    
+    objref this
+    
+    proc init() { local inf
+        
+        sourcePythonCodeForRangeVarHistory("\\..", "SimPiezo1Mechanotransduction ctor")
+        
+        biophysJsonFileNameOrEmpty = ""
+        isCustomProcAdvance = 1
+        isAltRunControl = 1
+        
+        rng = rngUtils.getFor_sim_xcDiffusion()  // Reuse existing RNG
+        
+        isBinFileLoaded = 0
+        isCreateOrLoad = 1
+        numForceSites = 10
+        radiusGen = 15      // um - smaller radius for cellular mechanics
+        forceInterval = 100  // ms between force applications
+        
+        gridRegion = new GridRegion()
+        
+        gridToWatchWidget = new GridToWatchWidget(1, new ECSsShowHelper(), gridRegion, this)
+        neuronPlayerWidget = new NeuronPlayerWidget(1, new ECSsShowHelper())
+        forceManagerWidget = new ForceManagerWidget($o1)  // nil object initially
+        
+        record = new RangeVarAnimationRecord(enumBinFileTypes.oid)
+        recorder = new RangeVarAnimationRecorder(record)
+        player = pyObj.RangeVarAnimationPlayer(record, neuronPlayerWidget)
+        
+        animSettingsWidget = new AnimationSettingsWidget(this, 1, record, player, gridRegion, neuronPlayerWidget)
+        
+        inf = math.inf
+        variable_domain(&numForceSites, 1, inf)
+        variable_domain(&radiusGen, float_epsilon, inf)
+        variable_domain(&forceInterval, 1, inf)
+        units(&radiusGen, units("L"))
+    }
+    
+    func preShowCheck() {
+        // Check if PIEZO1 mechanism is available
+        objref testSec
+        create testSec
+        testSec {
+            if (!ismembrane("Piezo1")) {
+                delete_section()
+                mwh.showWarningBox("PIEZO1 mechanism not found. Please ensure piezo1.mod is compiled and loaded.")
+                return 1
+            }
+        }
+        delete_section()
+        return 0
+    }
+    
+    proc show() { local isFirstShow, w, h, y localobj hBox, vBox
+        strdef title
+        
+        isFirstShow = $1
+        
+        // Set simulation parameters optimized for mechanotransduction
+        steps_per_ms = 10        // Higher resolution for fast channel kinetics
+        runStopAt = 500          // ms - shorter simulations
+        runStopIn = 100          // ms  
+        tstop = 1000             // ms
+        dt = 0.1                 // ms - fine temporal resolution
+        setdt()
+        
+        recorder.setDefaultDt(1)  // Record every step
+        
+        w = 520
+        h = 400
+        y = 300
+        title = "PIEZO1 Mechanotransduction Animation"
+        
+        if (isFirstShow) {
+            // Create a default force source
+            forceLibrary.deleteAll()
+            forceLibrary.addDefaultForceSource()
+        }
+        
+        lastUsedGridToWatchWidget = gridToWatchWidget
+        
+        showForceManagerBaseWidget()
+        
+        mainBox = new VBox()
+        mainBox.intercept(1)
+        {
+            hBox = new HBox()
+            hBox.intercept(1)
+            {
+                xpanel("")
+                xlabel("")
+                xradiobutton("Create new animation", "createOrLoadHandler(1, 0)", isCreateOrLoad)
+                xradiobutton("Play saved animation", "createOrLoadHandler(0, 0)", !isCreateOrLoad)
+                xlabel("")
+                xpanel()
+                xpanel("")
+                xlabel("")
+                xbutton("Show mechanotransduction animation", "animSettingsWidget.show(isBinFileLoaded, 0)")
+                xpanel()
+            }
+            hBox.intercept(0)
+            hBox.map()
+            
+            createOrLoadDeck = new Deck()
+            createOrLoadDeck.intercept(1)
+            {
+                vBox = new VBox()
+                vBox.intercept(1)
+                {
+                    xpanel("")
+                    xlabel("1. Click \"Manage Forces\" to create and configure mechanical stimulation sites")
+                    xlabel("2. Use \"Generate random forces\" to create multiple stimulation points across the cell")
+                    xlabel("3. Adjust \"Recording period\" below, then click \"Start simulation\"")
+                    xlabel("4. Specify output file path and name for animation data")
+                    xpanel()
+                    
+                    xpanel("")
+                    xpvalue("Number of force sites", &numForceSites, 1)
+                    xpvalue("Generation radius (um)", &radiusGen, 1)
+                    xpvalue("Force interval (ms)", &forceInterval, 1)
+                    xlabel("")
+                    xbutton("Manage Forces", "showForceManagerWidget()")
+                    xbutton("Generate random forces", "generateRandomForcesHandler()")
+                    xpanel()
+                    
+                    xpanel("")
+                    recorder.createDtEditBoxAndHint()
+                    xbutton("Where to watch the variable", "whereToWatchHandler()")
+                    xlabel("")
+                    xbutton("Start simulation", "altRunControlWidget.initAndRunHandler()")
+                    record.createTwoCheckBoxes( \
+                        "Save animation to BIN file", \
+                        "Save animation to TXT file")
+                    xlabel("")
+                    xpanel()
+                }
+                vBox.intercept(0)
+                vBox.map()
+                
+                xpanel("")
+                xlabel("")
+                xbutton("Load BIN file", "loadBinFileHandler()")
+                xpanel()
+            }
+            createOrLoadDeck.intercept(0)
+            createOrLoadDeck.map("", -1, -1, w, h)
+        }
+        mainBox.intercept(0)
+        mainBox.dismiss_action("dismissHandler()")
+        mainBox.map(title, 575, y, -1, -1)
+        
+        createOrLoadHandler(isCreateOrLoad, 1)
+    }
+    
+    func preRun() { local isCancel, isEnabled localobj nil
+        strdef watchedRangeVarNameWithIndex
+        
+        if (forceLibrary.isEmpty()) {
+            mwh.showWarningBox("Cannot proceed without any force application sites.")
+            return 1
+        }
+        
+        if (recorder.validateDt()) {
+            return 1
+        }
+        
+        // Default to watching P8 state (channel open probability)
+        watchedRangeVarNameWithIndex = "P8_Piezo1"
+        
+        isCancel = !string_dialog("Please choose a PIEZO1 variable to record and animate:", watchedRangeVarNameWithIndex)
+        if (isCancel) {
+            return 1
+        }
+        
+        // Validate that the variable exists
+        forall {
+            if (ismembrane("Piezo1")) {
+                // Variable validation would go here
+                break
+            }
+        }
+        
+        dismissChilds()
+        dismissIfNotNil(manageAndRunWidget)
+        
+        if (gridToWatchWidget.enumWhereToWatch != 0) {
+            gridRegion.deployGrid()
+        }
+        
+        record.setStaticData()
+        recorder.onJustBeforeRun(watchedRangeVarNameWithIndex, 1)
+        
+        return 0
+    }
+    
+    func preContinue() {
+        return 0
+    }
+    
+    proc advance() {
+        // Apply forces from all sources at current time
+        forceLibrary.applyForcesToCell(t)
+        
+        fadvance()
+        recorder.onStep()
+    }
+    
+    proc postRun() {
+        record.onJustAfterRun()
+        
+        isBinFileLoaded = 0
+        animSettingsWidget.show(isBinFileLoaded, 1)
+    }
+    
+    proc dismissNeuronPlayerWidget() {
+        neuronPlayerWidget.dismissHandler()
+    }
+    
+    proc simDismissHandler() {
+        dismissHandler()
+        
+        // Reset simulation parameters
+        steps_per_ms = 10
+        runStopAt = 5
+        runStopIn = 1
+        tstop = 100
+        dt = 0.1
+        setdt()
+    }
+    
+    // Private methods
+    
+    proc createOrLoadHandler() { local isCalledFromShow, cardIdx
+        isCreateOrLoad = $1
+        isCalledFromShow = $2
+        
+        cardIdx = !isCreateOrLoad
+        createOrLoadDeck.flip_to(cardIdx)
+        
+        if (isCalledFromShow) {
+            return
+        }
+        
+        if (isCreateOrLoad) {
+            showForceManagerBaseWidget()
+        } else {
+            dismissIfNotNil(manageAndRunWidget)
+        }
+    }
+    
+    proc showForceManagerBaseWidget() {
+        // Show the force manager interface
+        printf("Force Manager: %d sources available\n", forceLibrary.forceSourceList.count())
+    }
+    
+    proc showForceManagerWidget() {
+        forceManagerWidget.show()
+    }
+    
+    proc generateRandomForcesHandler() { local seed
+        seed = int(t*1000) + 12345  // Use current time as seed
+        forceLibrary.generateRandomSources(numForceSites, seed)
+        mwh.showInfoBox("Generated random force sites")
+    }
+    
+    proc whereToWatchHandler() {
+        dismissChilds()
+        gridToWatchWidget.show()
+    }
+    
+    proc loadBinFileHandler() { local isCancel
+        isCancel = record.loadFromBinFile()
+        if (isCancel) {
+            return
+        }
+        
+        isBinFileLoaded = 1
+        animSettingsWidget.show(isBinFileLoaded, 1)
+    }
+    
+    proc dismissHandler() {
+        dismissChilds()
+        unmapIfNotNil(mainBox)
+    }
+    
+    proc dismissChilds() {
+        dismissIfNotNil(gridToWatchWidget)
+        dismissIfNotNil(animSettingsWidget)
+        dismissIfNotNil(neuronPlayerWidget)
+        dismissIfNotNil(forceManagerWidget)
+    }
+    
+endtemplate SimPiezo1Mechanotransduction
+
+// Usage example and initialization
+proc initPiezo1Simulation() {
+    objref piezo1Sim, nil
+    piezo1Sim = new SimPiezo1Mechanotransduction(nil)
+    
+    if (!piezo1Sim.preShowCheck()) {
+        piezo1Sim.show(1)
+        printf("PIEZO1 Mechanotransduction simulation initialized\n")
+        printf("Use the interface to create force sources and run animations\n")
+    }
+}
+
+// Procedure to start the simulation
+proc startPiezo1MechanotransductionSim() {
+    load_file("nrngui.hoc")  // Ensure GUI is loaded
+    initPiezo1Simulation()
+}

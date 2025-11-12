@@ -1,0 +1,279 @@
+
+
+// !! can I get rid of this helper HOC template in favour of some custom decorator applied to data members in Python class?
+
+
+// We use this helper HOC template because, in the Python world, NEURON has some limitations and inconveniences:
+//  * h.units cannot assign units to a Python var:
+//      https://nrn.readthedocs.io/en/latest/python/programming/gui/widgets.html#units
+//  * h.variable_domain seem doesn't work for a Python var too:
+//      https://nrn.readthedocs.io/en/latest/python/programming/gui/misc.html#variable_domain
+//  * h.xpvalue requires the inconvenient declaration of the class data member as a h.ref
+//  * h.xvalue doesn't require h.ref, but has too verbose syntax: h.xvalue('Var name (units)', (self, 'varName'), 1)
+
+begintemplate SimMyelinatedAxonParamsHelper
+    
+    // Called from Python only, so no need to make them public
+    // public populateDiffAndConcParamsPanel, populateTestBiophysParamsPanel, populatePresParamsPanel, populateTrunkParamsPanel, setTrunkParams, populateSheathParamsPanel, populateMyelinParamsDeck, validate, validateSchwannForZebra
+    
+    // Just a workaround to avoid the error in GraphUtils.parseVarsFromTheGraph
+    public diam_axon, diam_sheath, L_axon, schwann1_start, schwann1_end, schwann2_start, maxNumSchwannCells, nseg_axon, numShells, Dt, Diff_k, ko0, ki0, veryMinOuterConc
+    public ik0, A, Xfactor_axon, Tfactor_axon, Xfactor_schwann, Tfactor_schwann
+    
+    external math, mwh
+    external sourcePythonCode
+    external pyObj
+    
+    objref parentSim
+    objref dirtyStatesHelper, enumParamCats
+    
+    diam_axon = -1
+    diam_sheath = -1
+    L_axon = -1
+    schwann1_start = -1
+    schwann1_end = -1
+    schwann2_start = -1
+    maxNumSchwannCells = -1
+    nseg_axon = -1
+    numShells = -1
+    Dt = -1
+    Diff_k = -1
+    ko0 = -1
+    ki0 = -1
+    veryMinOuterConc = -1
+    
+    // The next params are used for "test sines" mode only
+    ik0 = -1
+    A = -1
+    Xfactor_axon = -1
+    Tfactor_axon = -1
+    Xfactor_schwann = -1
+    Tfactor_schwann = -1
+    
+    
+    objref vfe_L_axon, vfe_diam_axon, vfe_nseg_axon
+    
+    
+    proc init() {
+        strdef lengthUnits
+        
+        parentSim = $o1
+        dirtyStatesHelper = $o2
+        
+        sourcePythonCode("\\Sims\\\\Neuron\\SimMyelinatedAxon", "from Helpers.DirtyStatesHelper import EnumParamCats", "SimMyelinatedAxonParamsHelper ctor")
+        enumParamCats = pyObj.EnumParamCats
+        
+        diam_axon = -1          // um
+        diam_sheath = 3         // um (inner diam of Schwann cells, must be > diam_axon;
+                                //     also, this diam specifies where we apply the Dirichlet boundary condition "conc = ko0" for non-myelinated segments of axon)
+        
+        L_axon = -1             // um (the region between end of AISDs and start of axon bifurcation)
+        
+        schwann1_start = 0.1    // all unitless; 0 means axon trunk start, 1 means the trunk end; all must be in range [0, 1] and must be ascending;
+        schwann1_end = 0.15     // here we specify just 3 points for the first two Schwann cells,
+        schwann2_start = 0.152  // so all others points will be calculated periodically
+        
+        maxNumSchwannCells = 10 // we will add new Schwann cells until reaching axon end / bifurcation or exceeding maxNumSchwannCells
+        
+        nseg_axon = -1          // nseg_schwann{i} and nseg_ranvier{i} will depend on nseg_axon, schwann{i}_start and schwann{i}_end
+        
+        numShells = 5           // the number of radial layers (shells) between axon and Schwann cell / Dirichlet boundary condition border
+        
+        Dt = 50 * dt            // ms (in model time, animation and printing period)
+        
+        // !! maybe use pyObj.ms_getDiff("Basic ions", "k_ion")
+        Diff_k = 0.02           // um2 / ms
+        
+        // !! maybe read from JSON because we'll assign them to k*0_k_ion later
+        ko0 = ko0_k_ion                                     // mM
+        ki0 = ki0_k_ion                                     // mM
+        
+        veryMinOuterConc = pyObj.ms_veryMinOuterConc        // mM (if we see that K+ conc drops below this threshold, then we replace the conc with this value)
+        
+        // The next params are used for "test sines" mode only (i.e. used only if isUseRealBiophysOrTestSines == False)
+        
+        // We define some test currents "ik" in axon section and Schwann cells sections and observe how these two fluxes contribute to the concentration in the common space
+        // The test currents is just a sine wave: ik = ik0 + A * sin(2 * PI * (x / X - t / T))
+        // The periods X and T are chosen different for axon and Schwann cells just for visual demonstration
+        
+        // Params for two sine waves:
+        //  ik = ik0 + A * sin(2 * PI * (x / X - t / T));
+        //  X = Xfactor * L_axon; T = Tfactor * Dt
+        ik0 = 5e-4              // mA / cm2
+        A = 1e-3                // mA / cm2
+        Xfactor_axon = 0.4      // unitless
+        Tfactor_axon = -16      // unitless
+        Xfactor_schwann = 0.1   // unitless
+        Tfactor_schwann = 8     // unitless
+        
+        
+        lengthUnits = units("L")
+        units(&diam_axon, lengthUnits)
+        units(&diam_sheath, lengthUnits)
+        units(&L_axon, lengthUnits)
+        units(&Dt, "in model time, ms")
+        units(&Diff_k, "um2 / ms")
+        units(&ko0, "mM")
+        units(&ki0, "mM")
+        units(&veryMinOuterConc, "mM")
+        
+        units(&ik0, "mA / cm2")
+        units(&A, "mA / cm2")
+        
+        
+        inf = math.inf
+        variable_domain(&diam_axon, float_epsilon, inf)
+        variable_domain(&diam_sheath, float_epsilon, inf)
+        variable_domain(&L_axon, float_epsilon, inf)
+        variable_domain(&schwann1_start, 0, 1)
+        variable_domain(&schwann1_end, 0, 1)
+        variable_domain(&schwann2_start, 0, 1)
+        variable_domain(&maxNumSchwannCells, 1, inf)
+        variable_domain(&nseg_axon, 1, inf)
+        variable_domain(&numShells, 2, inf)
+        variable_domain(&Dt, float_epsilon, inf)
+        variable_domain(&Diff_k, 0, inf)
+        variable_domain(&ko0, 0, inf)           // !! maybe use very_min here
+        variable_domain(&ki0, 0, inf)           //    and here
+        variable_domain(&veryMinOuterConc, float_epsilon, inf)  // !! not sure about the lower bound
+    }
+    
+    proc populateDiffAndConcParamsPanel() {
+        xpvalue("Diff_k", &Diff_k, 1, "onParamChange(enumParamCats.rxd)")
+        xpvalue("* ko0", &ko0, 1, "onParamChange(enumParamCats.biophys)")
+        xpvalue("ki0", &ki0, 1, "onParamChange(enumParamCats.biophys)")
+        xpvalue("ko_min", &veryMinOuterConc, 1, "onParamChange(enumParamCats.rxd)")
+        xlabel("* defines initial and boundary conditions")
+    }
+    
+    proc populateTestBiophysParamsPanel() { local isDeployOrRemoveMyelinSheath
+        isDeployOrRemoveMyelinSheath = $1
+        xlabel("ik = ik0 + A * sin(2 * PI * (x / X - t / T));")
+        xlabel("X = Xfactor * L_axon; T = Tfactor * Dt")
+        xpvalue("ik0", &ik0, 1, "onParamChange(enumParamCats.biophys)")
+        xpvalue("A", &A, 1, "onParamChange(enumParamCats.biophys)")
+        xpvalue("Xfactor_axon", &Xfactor_axon, 1, "onParamChange(enumParamCats.biophys)")
+        xpvalue("Tfactor_axon", &Tfactor_axon, 1, "onParamChange(enumParamCats.biophys)")
+        if (isDeployOrRemoveMyelinSheath) {
+            xpvalue("Xfactor_schwann", &Xfactor_schwann, 1, "onParamChange(enumParamCats.biophys)")
+            xpvalue("Tfactor_schwann", &Tfactor_schwann, 1, "onParamChange(enumParamCats.biophys)")
+        }
+    }
+    
+    proc populatePresParamsPanel() {
+        xpvalue("* Dt", &Dt, 1, "onParamChange(enumParamCats.anim)")
+        xlabel("* the period for animation, saving and printing")   // !! also, the period for calls of graph.exec_menu('View = plot')
+    }
+    
+    proc populateTrunkParamsPanel() {
+        vfe_L_axon = new ValueFieldEditor("L_axon", &L_axon, 1, "baseAxonChangedHandler(1, 0)")
+        vfe_diam_axon = new ValueFieldEditor("diam_axon", &diam_axon, 1, "baseAxonChangedHandler(0, 0)")
+        vfe_nseg_axon = new ValueFieldEditor("nseg_axon", &nseg_axon, 1, "baseAxonChangedHandler(0, 1)")
+    }
+    
+    proc setTrunkParams() {
+        L_axon = $1
+        diam_axon = $2
+        nseg_axon = $3
+        
+        vfe_L_axon.default()
+        vfe_diam_axon.default()
+        vfe_nseg_axon.default()
+    }
+    
+    proc populateSheathParamsPanel() {
+        xpvalue("* diam_sheath", &diam_sheath, 1, "onParamChange(enumParamCats.modifGeom)")
+        xpvalue("numRadialShells", &numShells, 1, "onParamChange(enumParamCats.rxd)")
+        xlabel("")
+        xlabel("* this diam specifies: (a) where to apply")
+        xlabel("   the Dirichlet boundary cond \"conc = ko0\"")
+        xlabel("   for non-myelinated regions of axon trunk")
+        xlabel("   and (b) Schwann cells inner diam")
+    }
+    
+    proc populateMyelinParamsDeck() {
+        xpanel("")
+        xlabel("")
+        xpvalue("* schwann1_start", &schwann1_start, 1, "schwannChangedHandler()")
+        xpvalue("* schwann1_end", &schwann1_end, 1, "schwannChangedHandler()")
+        xpvalue("* schwann2_start", &schwann2_start, 1, "schwannChangedHandler()")
+        xpvalue("maxNumSchwannCells", &maxNumSchwannCells, 1, "schwannChangedHandler()")
+        xlabel("")
+        xlabel("* 0 means axon trunk start, 1 means the trunk end;")
+        xlabel("   these 3 pts are for the first two Schwann cells,")
+        xlabel("   all others pts will be calculated periodically")
+        xlabel("")
+        xpanel()
+        xpanel("")
+        xlabel("")
+        xlabel("Hint: Use mouse to lay myelin on axon")
+        xlabel("<----- here")
+        xlabel("(it will be deployed on simulation start)")
+        xlabel("")
+        xbutton("Clean up drawing", "cleanUpDrawingHandler()")
+        xpanel()
+    }
+    
+    func validate() { local _diam_axon, isValidateZebraParams, isCancel1, isCancel2
+        _diam_axon = $1
+        isValidateZebraParams = $2
+        
+        mwh.startIntercepting()
+        {
+            isCancel1 = (_diam_axon >= diam_sheath)
+            if (isCancel1) {
+                mwh.showWarningBox("Make sure diam_axon < diam_sheath.")
+            }
+            if (isValidateZebraParams) {
+                isCancel2 = validateSchwannForZebra()
+            } else {
+                isCancel2 = 0
+            }
+        }
+        mwh.endIntercepting()
+        return isCancel1 || isCancel2
+    }
+    
+    func validateSchwannForZebra() { local isCancel
+        strdef msg
+        if (schwann1_end != 1) {
+            isCancel = (schwann1_start >= schwann1_end || schwann1_end >= schwann2_start)
+            msg = "Make sure schwann1_start < schwann1_end < schwann2_start."
+        } else {
+            schwann2_start = 1
+            isCancel = (schwann1_start == 1)
+            msg = "Make sure schwann1_start < 1."
+        }
+        if (isCancel) {
+            mwh.showWarningBox(msg)
+        }
+        return isCancel
+    }
+    
+    // All next staff is private
+    
+    
+    proc baseAxonChangedHandler() { local isLenChanged, isNsegChanged
+        isLenChanged = $1
+        isNsegChanged = $2
+        parentSim.onBaseAxonParamChanged(isLenChanged, isNsegChanged)
+        onParamChange(enumParamCats.modifGeom)
+    }
+    
+    proc schwannChangedHandler() {
+        parentSim.removeMyelinMarkers(0)
+        parentSim.drawMyelinZebra()
+        onParamChange(enumParamCats.modifGeom)
+    }
+    
+    proc cleanUpDrawingHandler() {
+        parentSim.removeMyelinMarkers(1)
+        onParamChange(enumParamCats.modifGeom)
+    }
+    
+    proc onParamChange() { localobj paramCat
+        paramCat = $o1
+        dirtyStatesHelper.onParamChange(paramCat)
+    }
+    
+endtemplate SimMyelinatedAxonParamsHelper

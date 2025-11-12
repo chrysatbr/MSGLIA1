@@ -1,0 +1,551 @@
+
+// !! deprecated: get rid of this file in favour of BiophysExportImportHelper and JSON files once we:
+//    (1) export/import density_GluTrans inhom model in the same way as for g_pas;
+//    (2) move the GLOBAL vars assigned below to the loaded JSON file
+
+// !! see also: Sims\Neuron\SimMyelinatedAxon\HocCode\biophysics_deprecated.hoc
+
+// Insert FRAP and set its params.
+proc _SectionInsertFRAP() {
+    insert FRAP
+    DFree_FRAP=0.15        // um2/sm
+}
+
+// Insert cadifus and set its params.
+proc _SectionInsertCadifus() {
+    insert cadifus
+    DCa_cadifus=0.30       // um2/sm
+    ip3i=1e-5              // initial ip3 mM
+    //insert ip3diffus
+}
+
+// Insert mechanisms for electrical simulations.
+proc InsertElectricMechanisms() { local isCadifusOrFRAP
+
+    isCadifusOrFRAP = $1
+    
+    // Soma, Dendrites
+    for eachSecInList(soma_ref, dendrite_ref) {
+        if (isCadifusOrFRAP) {
+            _SectionInsertCadifus()
+        } else {
+            _SectionInsertFRAP()
+        }
+    }
+    
+    // Leaves / heads, Stalks / necks
+    if (!isCadifusOrFRAP) {
+        for eachSecInList(nanoDistal_ref, nanoProximal_ref) {
+            _SectionInsertFRAP()
+        }
+    }
+    
+    // !! how about axon_ref, endFoot_ref and other_ref?
+}
+
+// Insert mechanisms needed for Glutamate simulation and set their params.
+proc _SectionInsertGlutamateMechanisms() {
+    insert CAl
+    if (isAstrocyteOrNeuron) {
+        execute("insert kdrglia")
+        execute("insert kir")
+    }
+    insert kdifl // New added
+    insert GluTrans
+    Gluout_GluTrans= 20e-6   // mM
+}
+
+// Insert mechanisms needed for Potassium simulation and set their params.
+proc _SectionInsertPotassiumMechanisms() {
+    //Ra = 100
+    //cm = 1
+   // insert pas
+   // g_pas = 0.001
+   // e_pas = -85
+    insert kdifl
+    D_kdifl = 0.6
+    ki0_kdifl=110
+    insert kpump
+}
+
+
+
+proc _SectionInsertTNFaMechanisms() {
+    insert TNFa
+    
+    // === ORIGINAL PARAMETERS ===
+    // LPS stimulation
+    lps_stim_TNFa = 0
+    lps_sensitivity_TNFa = 0.1
+    lps_threshold_TNFa = 1.0
+    
+    // Calcium-dependent activation
+    ca_threshold_TNFa = 0.0001
+    ca_sensitivity_TNFa = 2.0
+    
+    // TNFα production
+    basal_production_TNFa = 0.01
+    max_production_TNFa = 10.0
+    tau_production_TNFa = 100
+    tau_decay_TNFa = 500
+    
+    // TNFα-induced conductance
+    g_tnf_TNFa = 0.0001
+    pca_TNFa = 1.0
+    pna_TNFa = 0.1
+    pk_TNFa = 0.08
+    
+    // === NEW ENHANCED PARAMETERS ===
+    // mRNA dynamics
+    tau_mrna_TNFa = 50
+    
+    // IL-10 feedback (fast negative feedback)
+    il10_inhibition_strength_TNFa = 0.5
+    tau_il10_TNFa = 50
+    il10_production_factor_TNFa = 0.3
+    il10_decay_TNFa = 0.004
+    
+    // TGFβ feedback (slow negative feedback)
+    tgfb_inhibition_strength_TNFa = 0.7
+    tau_tgfb_TNFa = 200
+    tgfb_production_factor_TNFa = 0.2
+    tgfb_decay_TNFa = 0.002
+    
+    // Autocrine self-regulation
+    tnf_autocrine_hill_n_TNFa = 2.0
+    tnf_autocrine_k50_TNFa = 5.0
+    
+    // TNFR1 receptor dynamics
+    tnfr1_expression_TNFa = 1.0
+    tnfr1_kon_TNFa = 0.01
+    tnfr1_koff_TNFa = 0.001
+    
+    // TNFR2 receptor dynamics
+    tnfr2_expression_TNFa = 0.5
+    tnfr2_kon_TNFa = 0.05
+    tnfr2_koff_TNFa = 0.02
+    
+    // NFκB pathway
+    nfkb_activation_threshold_TNFa = 0.1
+    nfkb_decay_rate_TNFa = 0.02
+    nfkb_activation_rate_TNFa = 0.05
+    
+    // Translation and secretion
+    translation_delay_factor_TNFa = 0.1
+    secretion_rate_TNFa = 0.05
+}
+
+
+proc _SectionInsertIL1bMechanisms() {
+    insert IL1b
+    
+    // === BASIC PARAMETERS ===
+    // LPS stimulation
+    lps_stim_IL1b = 0
+    lps_sensitivity_IL1b = 0.12
+    lps_threshold_IL1b = 0.8
+    
+    // Calcium-dependent activation
+    ca_threshold_IL1b = 0.00008
+    ca_sensitivity_IL1b = 2.2
+    
+    // IL-1β production
+    basal_production_IL1b = 0.005
+    max_production_IL1b = 12.0
+    tau_production_IL1b = 80
+    tau_decay_IL1b = 450
+    tau_processing_IL1b = 30
+    
+    // IL-1β-induced conductance
+    g_il1b_IL1b = 0.00012
+    pca_IL1b = 1.0
+    pna_IL1b = 0.12
+    pk_IL1b = 0.09
+    
+    // === MRNA DYNAMICS ===
+    tau_mrna_IL1b = 45
+    
+    // === FEEDBACK INHIBITION ===
+    // IL-10 feedback (fast negative feedback)
+    il10_inhibition_strength_IL1b = 0.6
+    tau_il10_IL1b = 55
+    il10_production_factor_IL1b = 0.25
+    il10_decay_IL1b = 0.004
+    
+    // TGFβ feedback (slow negative feedback)
+    tgfb_inhibition_strength_IL1b = 0.5
+    tau_tgfb_IL1b = 210
+    tgfb_production_factor_IL1b = 0.15
+    tgfb_decay_IL1b = 0.002
+    
+    // === TNFα ACTIVATION (from network) ===
+    tnfa_activation_factor_IL1b = 0.8
+    tnfa_activation_k50_IL1b = 3.0
+    tnfa_hill_n_IL1b = 2.5
+    tau_tnfa_IL1b = 120
+    tnfa_decay_IL1b = 0.003
+    
+    // === AUTOCRINE SELF-REGULATION ===
+    il1b_autocrine_hill_n_IL1b = 2.2
+    il1b_autocrine_k50_IL1b = 4.0
+    
+    // === RECEPTOR DYNAMICS ===
+    // IL-1R1 receptor (Type I, signaling)
+    il1r1_expression_IL1b = 1.0
+    il1r1_kon_IL1b = 0.015
+    il1r1_koff_IL1b = 0.002
+    
+    // IL-1R2 receptor (Type II, decoy)
+    il1r2_expression_IL1b = 0.3
+    il1r2_kon_IL1b = 0.02
+    il1r2_koff_IL1b = 0.001
+    
+    // === NFκB PATHWAY ===
+    nfkb_activation_threshold_IL1b = 0.08
+    nfkb_decay_rate_IL1b = 0.025
+    nfkb_activation_rate_IL1b = 0.06
+    
+    // === INFLAMMASOME (NLRP3) ===
+    inflammasome_threshold_IL1b = 0.15
+    inflammasome_activation_rate_IL1b = 0.08
+    inflammasome_decay_rate_IL1b = 0.015
+    caspase1_activity_IL1b = 1.0
+    processing_rate_IL1b = 0.12
+    
+    // === TRANSLATION AND SECRETION ===
+    translation_delay_factor_IL1b = 0.12
+    secretion_rate_IL1b = 0.06
+}
+
+proc _SectionInsertIL6Mechanisms() {
+    insert IL6
+    
+    // === ORIGINAL PARAMETERS ===
+    // LPS stimulation
+    lps_stim_IL6 = 0
+    lps_sensitivity_IL6 = 0.1
+    lps_threshold_IL6 = 1.0
+    
+    // Calcium-dependent activation
+    ca_threshold_IL6 = 0.0001
+    ca_sensitivity_IL6 = 2.0
+    
+    // IL-6 production
+    basal_production_IL6 = 0.01
+    max_production_IL6 = 8.0
+    tau_production_IL6 = 120
+    tau_decay_IL6 = 400
+    
+    // IL-6-induced conductance
+    g_il6_IL6 = 0.00008
+    pca_IL6 = 1.0
+    pna_IL6 = 0.1
+    pk_IL6 = 0.08
+    
+    // === NEW ENHANCED PARAMETERS ===
+    // mRNA dynamics
+    tau_mrna_IL6 = 60
+    
+    // IL-10 production (IL-6 PRODUCES IL-10, not feedback like TNFα)
+    il10_production_factor_IL6 = 0.4
+    il10_decay_IL6 = 0.004
+    tau_il10_IL6 = 50
+    
+    // Cross-cytokine activation (optional - for network integration)
+    tnfa_activation_strength_IL6 = 0.3
+    il1b_activation_strength_IL6 = 0.4
+    
+    // Autocrine self-regulation
+    il6_autocrine_hill_n_IL6 = 2.0
+    il6_autocrine_k50_IL6 = 5.0
+    
+    // IL-6R receptor dynamics
+    il6r_expression_IL6 = 1.0
+    il6r_kon_IL6 = 0.015
+    il6r_koff_IL6 = 0.005
+    
+    // gp130 co-receptor dynamics
+    gp130_expression_IL6 = 1.2
+    gp130_kon_IL6 = 0.02
+    gp130_koff_IL6 = 0.002
+    
+    // STAT3 pathway
+    stat3_activation_threshold_IL6 = 0.1
+    stat3_decay_rate_IL6 = 0.015
+    stat3_activation_rate_IL6 = 0.06
+    
+    // Translation and secretion
+    translation_delay_factor_IL6 = 0.1
+    secretion_rate_IL6 = 0.04
+}
+
+proc _SectionInsertPiezo1Mechanisms() {
+    insert Piezo1
+    // Set default parameters
+    density = 1e8
+    mforce = 0
+    force_sensitivity = 0.05
+    force_threshold = 0.5       
+    g_single = 27e-12   
+    pca_Piezo1 = 1.0
+    pna_Piezo1 = 0.1
+    pk_Piezo1 = 0.08
+    k12_Piezo1 = 0.1
+    k21_Piezo1 = 0.05
+    k23_Piezo1 = 0.08
+    k32_Piezo1 = 0.04
+    k34_Piezo1 = 0.06
+    k43_Piezo1 = 0.03
+    k45_Piezo1 = 0.04
+    k54_Piezo1 = 0.02
+    k56_Piezo1 = 0.05
+    k65_Piezo1 = 0.025
+    k67_Piezo1 = 0.03
+    k76_Piezo1 = 0.015
+    k78_Piezo1 = 0.8
+    k87_Piezo1 = 0.4
+    k81_Piezo1 = 0.001
+    k18_Piezo1 = 0.0005
+}
+
+proc _SectionInsertPiezo2Mechanisms() {
+    insert Piezo2
+    // Set default parameters
+    density_Piezo2 = 1e8
+    mforce_Piezo2 = 0
+    force_sensitivity_Piezo2 = 0.08
+    force_threshold_Piezo2 = 0.3       
+    g_single_Piezo2 = 30e-12   
+    pca_Piezo2 = 1.0
+    pna_Piezo2 = 0.12
+    pk_Piezo2 = 0.09
+    k12_Piezo2 = 0.8
+    k21_Piezo2 = 0.08
+    k23_Piezo2 = 0.6
+    k32_Piezo2 = 0.06
+    k34_Piezo2 = 0.5
+    k43_Piezo2 = 0.05
+    k45_Piezo2 = 0.4
+    k54_Piezo2 = 0.04
+    k56_Piezo2 = 0.5
+    k65_Piezo2 = 0.05
+    k67_Piezo2 = 0.3
+    k76_Piezo2 = 0.03
+    k78_Piezo2 = 6.0
+    k87_Piezo2 = 0.6
+    k81_Piezo2 = 0.002
+    k18_Piezo2 = 0.001
+}
+
+DensityGluTransporters = 1e12   // 1/um2
+
+proc _SectionInsertTRPV4Mechanisms() {
+    insert TRPV4
+    
+    // === TRPV4 EXPRESSION PARAMETERS ===
+    trpv4_baseline_TRPV4 = 1.0
+    tau_expression_TRPV4 = 86400000        // 24h in ms (slow time scale)
+    tnfa_sensitivity_TRPV4 = 0.5
+    tnfa_threshold_trpv4_TRPV4 = 1.0
+    max_expression_fold_TRPV4 = 3.0
+    
+    // === CHANNEL ACTIVATION PARAMETERS ===
+    // Agonist (GSK1016790A)
+    agonist_conc_TRPV4 = 0
+    agonist_ec50_TRPV4 = 5.0               // nM
+    agonist_hill_TRPV4 = 2.0
+    
+    // Antagonist (GSK2193874)
+    antagonist_conc_TRPV4 = 0
+    antagonist_ic50_TRPV4 = 40.0           // nM
+    antagonist_hill_TRPV4 = 1.5
+    
+    // Inflammatory activation
+    tnfa_conc_ext_TRPV4 = 0                // External TNFα concentration
+    inflammatory_sensitivity_TRPV4 = 0.3
+    
+    // Mechanical/shear stress activation
+    shear_stress_TRPV4 = 0                 // dyn/cm2
+    shear_sensitivity_TRPV4 = 0.02
+    shear_threshold_TRPV4 = 5.0
+    
+    // ATP autocrine signaling
+    atp_production_rate_TRPV4 = 0.01
+    atp_decay_rate_TRPV4 = 0.05
+    atp_sensitivity_TRPV4 = 0.4
+    
+    // Calcium sensitization
+    ca_sensitivity_trpv4_TRPV4 = 1.5
+    ca_threshold_trpv4_TRPV4 = 0.0001      // mM
+    
+    // Activation kinetics
+    tau_activation_TRPV4 = 100             // ms (fast)
+    tau_deactivation_TRPV4 = 500           // ms
+    
+    // === CHANNEL CONDUCTANCE PARAMETERS ===
+    g_trpv4_max_TRPV4 = 0.0005             // S/cm2
+    
+    // Ion permeabilities (Ca2+ > Na+ > K+)
+    pca_trpv4_TRPV4 = 10.0                 // High calcium permeability
+    pna_trpv4_TRPV4 = 1.0
+    pk_trpv4_TRPV4 = 0.8
+    
+    // === NFκB SIGNALING PARAMETERS ===
+    nfkb_activation_rate_TRPV4 = 0.08
+    nfkb_decay_rate_TRPV4 = 0.015
+    nfkb_threshold_TRPV4 = 0.05
+    tau_nfkb_TRPV4 = 3600000               // 1h in ms
+    
+    // === TIGHT JUNCTION PROTEIN PARAMETERS ===
+    // Claudin-5 regulation
+    cldn5_baseline_TRPV4 = 1.0
+    cldn5_trpv4_dependence_TRPV4 = 0.6     // Structural support role
+    cldn5_inflammatory_loss_TRPV4 = 0.3    // Degradation during inflammation
+    tau_junction_proteins_TRPV4 = 7200000   // 2h in ms
+    
+    // VE-Cadherin regulation
+    vecad_baseline_TRPV4 = 1.0
+    vecad_trpv4_dependence_TRPV4 = 0.4
+    vecad_inflammatory_loss_TRPV4 = 0.2
+    
+    // === CELL ADHESION MOLECULE PARAMETERS ===
+    tau_adhesion_molecules_TRPV4 = 14400000 // 4h in ms
+    
+    // ICAM1 (intercellular adhesion molecule-1)
+    icam1_baseline_TRPV4 = 0.3
+    icam1_inflammatory_gain_TRPV4 = 5.0
+    icam1_trpv4_modulation_TRPV4 = 0.4
+    
+    // VCAM1 (vascular cell adhesion molecule-1)
+    vcam1_baseline_TRPV4 = 0.2
+    vcam1_inflammatory_gain_TRPV4 = 8.0
+    vcam1_trpv4_modulation_TRPV4 = 0.5
+    
+    // E-selectin (SELE)
+    sele_baseline_TRPV4 = 0.1
+    sele_inflammatory_gain_TRPV4 = 15.0    // Most sensitive to TRPV4
+    sele_trpv4_modulation_TRPV4 = 0.6
+    
+    // === CYTOKINE/CHEMOKINE PARAMETERS ===
+    // CCL2 (MCP-1) - NFκB-dependent
+    ccl2_baseline_TRPV4 = 0.1
+    ccl2_nfkb_dependence_TRPV4 = 2.0
+    ccl2_decay_rate_TRPV4 = 0.0001
+    
+    // CCL5 (RANTES) - inflammatory induction
+    ccl5_baseline_TRPV4 = 0.05
+    ccl5_inflammatory_gain_TRPV4 = 3.0
+    ccl5_decay_rate_TRPV4 = 0.0001
+    
+    // Caveolin-1 (barrier dysfunction marker)
+    cav1_baseline_TRPV4 = 0.5
+    cav1_inflammatory_gain_TRPV4 = 10.0
+    cav1_trpv4_dependence_TRPV4 = 0.3
+}
+
+// Insert mechanisms for Glutamate simulation.
+proc InsertGlutamateMechanisms() {
+
+    // Soma, Dendrites, Stalks / necks
+    for eachSecInList(soma_ref, dendrite_ref, nanoProximal_ref) {
+        _SectionInsertGlutamateMechanisms()
+    }
+    
+    // Leaves / heads
+    for eachSecInList(nanoDistal_ref) {
+        _SectionInsertGlutamateMechanisms()
+        density_GluTrans=(1+diam/(2*L))*DensityGluTransporters
+    }
+    
+    // Stalks / necks
+    /* !! moved here from AstrocyteNanoBranch.updateBiophysics
+    for eachSecInList(nanoProximal_ref) {
+        density_GluTrans = DensityGluTransporters
+    }
+    */
+    
+    // !! how about axon_ref, endFoot_ref and other_ref?
+}
+
+
+// Insert mechanisms for Potassium simulation.
+proc InsertPotassiumMechanisms() {
+
+    // !! maybe use "forall" here
+    
+    // Soma, Dendrites, Leaves / heads, Stalks / necks
+    for eachSecInList(soma_ref, dendrite_ref, nanoDistal_ref, nanoProximal_ref) {
+       _SectionInsertPotassiumMechanisms()
+    }
+    
+    // !! how about axon_ref, endFoot_ref and other_ref?
+}
+
+proc InsertPiezo1Mechanisms() {
+
+    // Soma, Dendrites, Leaves / heads, Stalks / necks
+    for eachSecInList(soma_ref, dendrite_ref, nanoDistal_ref, nanoProximal_ref) {
+        _SectionInsertPiezo1Mechanisms()
+    }
+
+    // for eachSecInList(axon_ref, endFoot_ref, other_ref) {
+    //     _SectionInsertPiezo1Mechanisms()
+    // }
+}
+
+proc InsertPiezo2Mechanisms() {
+
+    // Soma, Dendrites, Leaves / heads, Stalks / necks
+    for eachSecInList(soma_ref, dendrite_ref, nanoDistal_ref, nanoProximal_ref) {
+        _SectionInsertPiezo2Mechanisms()
+    }
+
+    // for eachSecInList(axon_ref, endFoot_ref, other_ref) {
+    //     _SectionInsertPiezo2Mechanisms()
+    // }
+}
+
+// Insert mechanisms for TNFa simulation.
+proc InsertTNFaMechanisms() {
+
+    // !! maybe use "forall" here
+    
+    // Soma, Dendrites, Leaves / heads, Stalks / necks
+    for eachSecInList(soma_ref, dendrite_ref, nanoDistal_ref, nanoProximal_ref) {
+       _SectionInsertTNFaMechanisms()
+    }
+ }  
+// Insert mechanisms for IL-1β simulation.
+proc InsertIL1bMechanisms() {
+
+    // !! maybe use "forall" here
+    
+    // Soma, Dendrites, Leaves / heads, Stalks / necks
+    for eachSecInList(soma_ref, dendrite_ref, nanoDistal_ref, nanoProximal_ref) {
+       _SectionInsertIL1bMechanisms()
+    }
+    
+} 
+
+proc InsertIL6Mechanisms() {
+
+    // !! maybe use "forall" here
+    
+    // Soma, Dendrites, Leaves / heads, Stalks / necks
+    for eachSecInList(soma_ref, dendrite_ref, nanoDistal_ref, nanoProximal_ref) {
+       _SectionInsertIL6Mechanisms()
+    }
+    
+}
+
+proc InsertTRPV4Mechanisms() {
+
+    // !! maybe use "forall" here
+    
+    // Soma, Dendrites, Leaves / heads, Stalks / necks
+    for eachSecInList(soma_ref, dendrite_ref, nanoDistal_ref, nanoProximal_ref) {
+       _SectionInsertTRPV4Mechanisms()
+    }
+    
+}  
+

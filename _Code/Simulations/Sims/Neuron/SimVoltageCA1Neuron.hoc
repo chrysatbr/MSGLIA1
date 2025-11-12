@@ -1,0 +1,364 @@
+
+// !! TODOs:
+//  * maybe merge two biophys JSON files into one (just like we do for "SimMyelinatedAxon.json")
+//  * in showMainSubCore, don't call addPointsForVoltageInDendrites like in showFallbackSubCore,
+//    but rather take the equidistant points along the rangeVarPlot path starting at {sec1_ref, u1} and ending at {sec2_ref, u2}
+//  * update showMainSubCore to guarantee a point at the farthest end of "ProxyDendrites"
+//  * (?) add vertical coloured lines on rangeGraph indicating the observation points
+
+begintemplate SimVoltageCA1Neuron
+    
+    public preShowCheck, show, simDismissHandler
+    public biophysJsonFileNameOrEmpty, isCustomProcAdvance, isAltRunControl
+    
+    external getDistRangeGivenSections, isDisconnectedDistance, secListToListOfSecRef, addVarToGraph, removeItemFromList, unmapIfNotNil, codeContractViolation
+    external math, compUtils, mwh
+    external eachPointInGrid, eachSegmInSecList
+    external soma_ref, dendrite_ref
+    external pyObj
+    external graphList, flush_list
+    external tstop
+    external enumColours
+    
+    strdef biophysJsonFileNameOrEmpty
+    isCustomProcAdvance = -1
+    isAltRunControl = -1
+    
+    isBothDendCompsFound = -1
+    objref proxDendCompOrNil, distDendCompOrNil
+    
+    objref timeGraphBox, obsPtsAndPathBox, rangeBox
+    objref timeGraph, rangeVarPlot, rangeGraph
+    
+    numDendPts = -1
+    y_min = -1
+    y_max = -1
+    
+    objref ppmsList
+    
+    
+    proc init() {
+        // biophysJsonFileNameOrEmpty will be set in preShowCheck
+        isCustomProcAdvance = 0
+        isAltRunControl = 0
+        
+        // !! for numDendPts >= 9, the colours repeat in cycle
+        numDendPts = 5
+        y_min = -80     // (mV)
+        y_max = 40      // (mV)
+    }
+    
+    func preShowCheck() { localobj nil
+        
+        compUtils.findDistMechCompByName("ProxyDendrites", 0, proxDendCompOrNil)
+        compUtils.findDistMechCompByName("DistalDendrites", 0, distDendCompOrNil)
+        
+        isBothDendCompsFound = (proxDendCompOrNil != nil && distDendCompOrNil != nil)
+        
+        if (isBothDendCompsFound) {
+            biophysJsonFileNameOrEmpty = "SimVoltageCA1NeuronFull.json"
+        } else {
+            biophysJsonFileNameOrEmpty = "SimVoltageCA1Neuron.json"
+        }
+        
+        return 0
+    }
+    
+    proc show() { localobj pathShape
+        
+        tstop = 100     // (ms)
+        
+        timeGraphBox = new VBox()
+        timeGraphBox.intercept(1)
+        {
+            timeGraph = new Graph()
+        }
+        timeGraphBox.intercept(0)
+        timeGraphBox.map("Time-Voltage graph", 10, 10, -1, -1)
+        
+        obsPtsAndPathBox = new VBox()
+        obsPtsAndPathBox.intercept(1)
+        {
+            pathShape = new Shape()
+        }
+        obsPtsAndPathBox.intercept(0)
+        obsPtsAndPathBox.map("Observation Points and Path", 420, 10, -1, -1)
+        
+        rangeBox = new VBox()
+        rangeBox.intercept(1)
+        {
+            rangeGraph = new Graph()
+        }
+        rangeBox.intercept(0)
+        rangeBox.map("Range-Voltage graph", 698, 10, -1, -1)
+        
+        ppmsList = new List()
+        
+        showCore(pathShape)
+        
+        if (!isBothDendCompsFound) {
+            mwh.showWarningBox("It's recommended to split \"Dendrites\" compartment into \"ProxyDendrites\" and \"DistalDendrites\", so we can assign more realistic biophysics.")
+        }
+    }
+    
+    proc simDismissHandler() { localobj nil
+        
+        proxDendCompOrNil = nil
+        distDendCompOrNil = nil
+        
+        removeItemFromList(graphList[0], timeGraph)
+        removeItemFromList(flush_list, rangeGraph)
+        
+        unmapIfNotNil(timeGraphBox)
+        unmapIfNotNil(obsPtsAndPathBox)
+        unmapIfNotNil(rangeBox)
+        
+        ppmsList = nil
+    }
+    
+    // All next staff is private
+    
+    
+    proc showCore() { local colourIdx, u, x_min, x_max, isDisconnected localobj pathShape, pyVarsSet, pathSecList
+        strdef var
+        
+        pathShape = $o1
+        
+        // pathShape.menu_remove("3D Rotate")      // !! error here: menu_remove not a public member of Shape
+        pathShape.color_all(enumColours.grey)
+        
+        pyVarsSet = pyObj.set()
+        rangeVarPlot = new RangeVarPlot("v")
+        
+        // !! move the legend to the top-right corner
+        
+        colourIdx = enumColours.red     // !! maybe use Blue here not to confuse with pathShape and rangeGraph palette
+        u = 0.5
+        soma_ref.o(0).sec {
+            sprint(var, "%s.v(%g)", secname(), u)
+            createOnePPM(pathShape, u, colourIdx)
+        }
+        addVarToGraph(timeGraph, var, colourIdx)
+        pyVarsSet.add(var)
+        colourIdx = enumColours.makeSureNotWhite(colourIdx + 1)
+        
+        if (isBothDendCompsFound) {
+            isDisconnected = showMainSubCore(pathShape, proxDendCompOrNil.list_ref, distDendCompOrNil.list_ref, pyVarsSet, colourIdx, &x_min, &x_max)
+            if (isDisconnected) {
+                return          // !! it would be better to handle this case in preShowCheck
+            }
+        } else {
+            // We'll use dendrite_ref
+            x_max = showFallbackSubCore(pathShape, pyVarsSet, colourIdx)
+            if (x_max == -1) {
+                return          // !! it would be better to handle this case in preShowCheck
+            }
+            x_min = 0
+        }
+        
+        timeGraph.size(0, tstop, y_min, y_max)
+        setXYLabels(timeGraph, "Time (ms)")
+        graphList[0].append(timeGraph)
+        
+        rangeGraph.addobject(rangeVarPlot, enumColours.red, 0)
+        rangeGraph.size(x_min, x_max, y_min, y_max)
+        setXYLabels(rangeGraph, "Distance (um)")
+        flush_list.append(rangeGraph)
+        
+        pathSecList = new SectionList()
+        rangeVarPlot.list(pathSecList)      // !! we have called this in showMainSubCore - just reuse
+        pathShape.color_list(pathSecList, enumColours.red)
+    }
+    
+    func showMainSubCore() { local colourIdx, dist1_best, u1, dist2_best, u2, dist_max localobj pathShape, proxDendSec_list, distDendSec_list, pyVarsSet, sec1_ref, sec2_ref, secList, list_ref
+        
+        pathShape = $o1
+        proxDendSec_list = $o2
+        distDendSec_list = $o3
+        pyVarsSet = $o4
+        colourIdx = $5
+        
+        dist1_best = findMostDistantPointInSections(proxDendSec_list, sec1_ref, &u1)
+        if (isDisconnectedDistance(dist1_best)) {
+            return 1
+        }
+        
+        dist2_best = findMostDistantPointInSections(distDendSec_list, sec2_ref, &u2)
+        if (isDisconnectedDistance(dist2_best)) {
+            return 1
+        }
+        
+        sec1_ref.sec {
+            rangeVarPlot.begin(u1)
+        }
+        
+        sec2_ref.sec {
+            rangeVarPlot.end(u2)
+        }
+        
+        secList = new SectionList()
+        rangeVarPlot.list(secList)
+        list_ref = new List()
+        secListToListOfSecRef(secList, list_ref)
+        
+        // !! instead of calling this like in showFallbackSubCore,
+        //    take the equidistant points along the rangeVarPlot path starting at {sec1_ref, u1} and ending at {sec2_ref, u2}
+        dist_max = addPointsForVoltageInDendrites(list_ref, pathShape, timeGraph, pyVarsSet, colourIdx)
+        if (dist_max == -1) {
+            codeContractViolation()
+        }
+        
+        $&6 = -dist1_best
+        $&7 = dist2_best
+        
+        return 0
+    }
+    
+    func showFallbackSubCore() { local colourIdx, dist_max localobj pathShape, pyVarsSet
+        
+        pathShape = $o1
+        pyVarsSet = $o2
+        colourIdx = $3
+        
+        soma_ref.o(0).sec {
+            rangeVarPlot.begin(0.5)
+        }
+        
+        dist_max = addPointsForVoltageInDendrites(dendrite_ref, pathShape, timeGraph, pyVarsSet, colourIdx)
+        if (dist_max == -1) {   //
+            return -1           // !! maybe remove this
+        }                       //
+        
+        return dist_max
+    }
+    
+    // Here we choose some quite random points on dendrites equidistantly spaced by "distance" ("numDendPts" points in total);
+    // !! an alternative implementation may choose "numDendPts" farthest from each other points on dendrites (using the graph theory)
+    func addPointsForVoltageInDendrites() { local colourIdx, isDisconnected, dist_min, dist_max, u, isFirstPoint, dist localobj list_ref, pathShape, timeGraph, pyVarsSet
+        strdef sec_name, var
+        
+        list_ref = $o1
+        pathShape = $o2
+        timeGraph = $o3
+        pyVarsSet = $o4
+        colourIdx = $5
+        
+        isDisconnected = getDistRangeGivenSections(list_ref, &dist_min, &dist_max)
+        if (isDisconnected) {
+            mwh.showWarningBox("Cannot proceed with this simulation because at least one dendrite section doesn't have a topological connection with the distance centre.")
+            return -1
+        }
+        
+        u = -1
+        
+        isFirstPoint = 1
+        for eachPointInGrid(&dist, dist_min, dist_max, numDendPts + 1) {
+            if (isFirstPoint) {
+                // We have used soma_ref.o(0).sec(0.5) as the first watched point (the distance centre)
+                isFirstPoint = 0
+                continue
+            }
+            findSpecificDistancePointInDendrites(dist, sec_name, &u)
+            sprint(var, "%s.v(%g)", sec_name, u)
+            if (pyObj.isInPySet(pyVarsSet, var)) {
+                continue    // !! maybe it would be better to get back to findSpecificDistancePointInDendrites and find the next candidate
+            }
+            addVarToGraph(timeGraph, var, colourIdx)
+            push_section(sec_name)
+            {
+                createOnePPM(pathShape, u, colourIdx)
+            }
+            pop_section()
+            pyVarsSet.add(var)
+            colourIdx = enumColours.makeSureNotWhite(colourIdx + 1)
+        }
+        
+        if (u == -1) {
+            // !!
+            codeContractViolation()
+        }
+        
+        push_section(sec_name)
+        {
+            rangeVarPlot.end(u)
+        }
+        pop_section()
+        
+        return dist_max
+    }
+    
+    func findMostDistantPointInSections() { local dist_best, u_best, u, dist localobj sec_list, sec_ref
+        sec_list = $o1
+        
+        dist_best = -1
+        u_best = -1
+        
+        for eachSegmInSecList(&u, sec_list) {
+            dist = distance(u)
+            if (dist > dist_best) {
+                sec_ref = new SectionRef()
+                u_best = u
+                dist_best = dist
+            }
+        }
+        
+        if (dist_best == -1) {
+            // !!
+            codeContractViolation()
+        }
+        
+        $o2 = sec_ref
+        $&3 = u_best
+        
+        return dist_best
+    }
+    
+    proc findSpecificDistancePointInDendrites() { local dist_exp, delta_best, u_best, u, dist, delta
+        strdef sec_name
+        
+        dist_exp = $1
+        
+        delta_best = math.inf
+        u_best = -1
+        
+        for eachSegmInSecList(&u, dendrite_ref) {
+            dist = distance(u)
+            delta = abs(dist - dist_exp)
+            if (delta < delta_best) {
+                sec_name = secname()
+                u_best = u
+                delta_best = delta
+            }
+        }
+        
+        if (u_best == -1) {
+            // !!
+            codeContractViolation()
+        }
+        
+        $s2 = sec_name
+        $&3 = u_best
+    }
+    
+    // !! code dup. with py:MyelRegionHelper._createOnePPM
+    proc createOnePPM() { local u, colourIdx localobj pathShape, ppm
+        pathShape = $o1
+        u = $2
+        colourIdx = $3
+        
+        ppm = new PointProcessMark(u)
+        pathShape.point_mark(ppm, colourIdx)
+        
+        // Without the next command, the marker won't be shown correctly after "3D Rotate"
+        ppmsList.append(ppm)
+    }
+    
+    proc setXYLabels() { localobj graph
+        strdef x_label
+        graph = $o1
+        x_label = $s2
+        graph.label(0.44, 0.015, x_label)
+        graph.label(0.04, 0.95, "Voltage (mV)")
+    }
+    
+endtemplate SimVoltageCA1Neuron

@@ -1,0 +1,394 @@
+// Forward declaration - will be implemented at the bottom
+proc TNFaIteration() { }
+
+// Simple 2D distance calculation utility
+objref geomMath
+geomMath = new List()
+
+// Distance calculation function
+func dist2D_PtToPt_squared() {
+    return ($1-$3)*($1-$3) + ($2-$4)*($2-$4)
+}
+
+begintemplate SimTNFa
+    
+    public preShowCheck, show, preRun, preContinue, advance, postRun, simDismissHandler
+    public biophysJsonFileNameOrEmpty, isCustomProcAdvance, isAltRunControl
+    
+    // Just a workaround to avoid the error in GraphUtils.parseVarsFromTheGraph
+    public PX, PY, PZ, R_STIM, TimeBegin, MaxLPS, PX2, LPSSensitivity, Tau1, Tau2
+    
+    external TNFaIteration
+    external seClampHelper
+    external altRunControlWidget
+    external tstop
+    external removeItemFromList, unmapIfNotNil
+    external dendrite_ref
+    external graphList, fast_flush_list
+    
+    strdef biophysJsonFileNameOrEmpty
+    isCustomProcAdvance = -1
+    isAltRunControl = -1
+    strdef outTxtFileRelPathName
+
+	
+    
+    // UI - Enhanced with additional graphs for feedback mechanisms
+    objref vBoxTNFaMain, vBoxGraphSEClamp, vBoxGraphLPS, vBoxGraphTNFConc
+    objref vBoxGraphIL10, vBoxGraphTGFb, vBoxGraphNFkB
+    objref vBoxPlotShapeVoltage, vBoxPlotShapeLPS, vBoxPlotShapeTNF
+    objref graphSEClamp, graphLPS, graphTNFConc, graphIL10, graphTGFb, graphNFkB
+    objref plotShapeVoltage, plotShapeLPS, plotShapeTNF
+    
+    // Statistics file
+    objref fileTNFaResults
+    
+    
+    proc init() {
+        biophysJsonFileNameOrEmpty = "SimTNFa.json"
+        isCustomProcAdvance = 1
+        isAltRunControl = 1
+        
+        outTxtFileRelPathName = "Text results/TNFa_dynamics.txt"
+        
+        fileTNFaResults = new File()
+    }
+    
+    func preShowCheck() {
+        return 0
+    }
+    
+    // Opens TNFa simulation window.
+    proc show() {
+        initParamsTNFa()
+        seClampHelper.deployClamp(0)
+        showTNFaUi()
+    }
+    
+    // Updates LPS stimulation values on the cell.
+    proc advance() {
+        fadvance()
+        TNFaIteration(PX, PY, R_STIM, TimeBegin, Tau1, MaxLPS, PX2, LPSSensitivity, Tau2, PZ)
+        graphSEClamp.exec_menu("View = plot")
+        graphLPS.exec_menu("View = plot")
+        graphTNFConc.exec_menu("View = plot")
+        graphIL10.exec_menu("View = plot")
+        graphTGFb.exec_menu("View = plot")
+        graphNFkB.exec_menu("View = plot")
+        plotShapeLPS.exec_menu("View = plot")
+        
+        // Write data to file: time, LPS, TNFa, IL10, TGFb, NFkB
+        fileTNFaResults.printf("%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\n", t, dendrite_ref.o(0).sec.lps_stim_TNFa(0.5), dendrite_ref.o(0).sec.tnf_conc_TNFa(0.5), dendrite_ref.o(0).sec.il10_conc_TNFa(0.5), dendrite_ref.o(0).sec.tgfb_conc_TNFa(0.5), dendrite_ref.o(0).sec.nfkb_active_TNFa(0.5))
+    }
+    
+    proc preRun() {
+        fileTNFaResults.wopen(outTxtFileRelPathName)
+    }
+    
+    proc preContinue() {
+        fileTNFaResults.aopen(outTxtFileRelPathName)
+    }
+    
+    proc postRun() {
+        fileTNFaResults.close()
+        print "TNFa results saved to: ", outTxtFileRelPathName
+    }
+    
+    proc simDismissHandler() {
+        
+        removeItemFromList(graphList[1], graphLPS)
+        removeItemFromList(graphList[1], graphSEClamp)
+        removeItemFromList(graphList[1], graphTNFConc)
+        removeItemFromList(graphList[1], graphIL10)
+        removeItemFromList(graphList[1], graphTGFb)
+        removeItemFromList(graphList[1], graphNFkB)
+        removeItemFromList(fast_flush_list, plotShapeLPS)
+        removeItemFromList(fast_flush_list, plotShapeVoltage)
+        removeItemFromList(fast_flush_list, plotShapeTNF)
+        
+        unmapIfNotNil(vBoxTNFaMain)
+        unmapIfNotNil(vBoxGraphSEClamp)
+        unmapIfNotNil(vBoxGraphLPS)
+        unmapIfNotNil(vBoxGraphTNFConc)
+        unmapIfNotNil(vBoxGraphIL10)
+        unmapIfNotNil(vBoxGraphTGFb)
+        unmapIfNotNil(vBoxGraphNFkB)
+        unmapIfNotNil(vBoxPlotShapeVoltage)
+        unmapIfNotNil(vBoxPlotShapeLPS)
+        unmapIfNotNil(vBoxPlotShapeTNF)
+        
+        seClampHelper.removeClamp()
+    }
+    
+    // All next staff is private
+    
+    
+    // Sets initial UI and simulation parameters.
+    proc initParamsTNFa() {
+        // Parameter of TNFa/LPS stimulation - optimized for microglial response
+        PX = 0                // X- Coordinate of the stimulation site
+        PY = -20              // Y - coordinate of the stimulation site  
+        PZ = 0                // Z - coordinate of the stimulation site
+        PX2 = 0               // Distance in x-coordinate of another stimulation site
+        R_STIM = 5.0          // Radius of LPS stimulation
+        TimeBegin = 5         // Time of stimulation onset
+        Tau1 = 1              // Rise time of LPS application
+        Tau2 = 20             // Decay time of LPS application
+        MaxLPS = 100          // Maximum LPS concentration in ng/ml
+        LPSSensitivity = 0.1  // LPS sensitivity parameter
+
+        forall {
+            if (ismembrane("TNFa")) {
+                // Intracellular calcium concentration (mM)
+                cai = 0.0001   // Calcium inside (basal level)
+                
+                // Use enhanced physiologically realistic parameters
+                lps_sensitivity_TNFa = 0.1
+                ca_threshold_TNFa = 0.0001
+                max_production_TNFa = 10.0
+                
+                // Initialize feedback mechanisms
+                il10_inhibition_strength_TNFa = 0.5
+                tgfb_inhibition_strength_TNFa = 0.7
+                tau_il10_TNFa = 50
+                tau_tgfb_TNFa = 200
+                
+                // Initialize receptor parameters
+                tnfr1_expression_TNFa = 1.0
+                tnfr2_expression_TNFa = 0.5
+            }
+        }
+    }
+    
+    // Shows TNFa simulation UI.
+    proc showTNFaUi() {
+        vBoxTNFaMain = new VBox()
+        vBoxTNFaMain.intercept(1)
+        {
+            xpanel("")
+            xlabel("================== TNFa/LPS Microglial Stimulation ==================")
+            xlabel("Includes: Feedback inhibition (IL10, TGFb), Receptor dynamics (TNFR1/2)")
+            xlabel("                NFkB pathway, and Autocrine regulation")
+            xlabel("==============================================================================")
+            xpvalue("X coordinate (um)", &PX, 1)
+            xpvalue("Y coordinate (um)", &PY, 1)
+            xpvalue("Z coordinate (um)", &PZ, 1)
+            xpvalue("Stimulation radius (um)", &R_STIM, 1)
+            xpvalue("Stimulation onset (ms)", &TimeBegin, 1)
+            xpvalue("Maximum LPS (ng/ml)", &MaxLPS, 1)
+            xpvalue("Distance between two stimulation sites (um)", &PX2, 1)
+            xpvalue("LPS sensitivity", &LPSSensitivity, 1)
+            xpvalue("Tau rise (ms)", &Tau1, 1)
+            xpvalue("Tau decay (ms)", &Tau2, 1)
+            xlabel("==============================================================================")
+            xpanel(625,164)
+            
+            xpanel("")
+            xlabel("================== Voltage clamp of soma==================")
+            xpvalue("Somatic voltage clamp", &seClampHelper.seClamp.amp1, 1)
+            xpvalue("Clamp duration", &seClampHelper.seClamp.dur1, 1)
+            xlabel("----------------------------------------------------------------------------------------------------------")
+            xpvalue("Simulation time (ms)", &tstop, 1)
+            xbutton("Run simulation", "altRunControlWidget.initAndRunHandler()")
+            xpanel(328,129)
+        }
+        vBoxTNFaMain.intercept(0)
+        vBoxTNFaMain.map("TNFa settings", 195, 102, 350, 580)
+        
+        vBoxGraphSEClamp = new VBox()
+        vBoxGraphSEClamp.intercept(1)
+        {
+            graphSEClamp = new Graph(0)
+            graphList[1].append(graphSEClamp)
+            graphSEClamp.size(0,150,-0.015,-5.82077e-010)
+            graphSEClamp.view(0, -0.015, 150, 0.015, 50, 705, 380, 200)
+            graphSEClamp.addexpr("seClampHelper.seClamp.i", 1, 1, 0.8, 0.9, 2)
+            graphSEClamp.yaxis(0)
+            graphSEClamp.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphSEClamp.label(0.1, 0.09, "Clamp current (nA)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphSEClamp.intercept(0)
+        vBoxGraphSEClamp.map("SE Clamp Current vs Time", 50, 705, 380, 200)
+
+        vBoxGraphLPS = new VBox()
+        vBoxGraphLPS.intercept(1)
+        {
+            graphLPS = new Graph(0)
+            graphList[1].append(graphLPS)
+            graphLPS.size(0,150,-3.49246e-010,0.0101)
+            graphLPS.view(0, -5, 150, 105, 440, 705, 380, 200)
+            graphLPS.addvar("dendrite_ref.o(0).sec.lps_stim_TNFa( 0.5 )", 1, 1, 0.8, 0.9, 2)
+            graphLPS.yaxis(0)
+            graphLPS.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphLPS.label(0.1, 0.09, "Applied LPS (ng/ml)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphLPS.intercept(0)
+        vBoxGraphLPS.map("LPS Profile", 440, 705, 380, 200)
+
+        // TNF Concentration Graph
+        vBoxGraphTNFConc = new VBox()
+        vBoxGraphTNFConc.intercept(1)
+        {
+            graphTNFConc = new Graph(0)
+            graphList[1].append(graphTNFConc)
+            graphTNFConc.size(0,150,-0.01,0.01)
+            graphTNFConc.view(0, -0.5, 150, 11, 830, 705, 380, 200)
+            graphTNFConc.addvar("dendrite_ref.o(0).sec.tnf_conc_TNFa( 0.5 )", 1, 1, 0.8, 0.9, 2)
+            graphTNFConc.yaxis(0)
+            graphTNFConc.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphTNFConc.label(0.1, 0.09, "TNFa Concentration (pg/ml)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphTNFConc.intercept(0)
+        vBoxGraphTNFConc.map("TNFa Concentration vs Time", 830, 705, 380, 200)
+        
+        // IL-10 Concentration Graph (Fast Feedback)
+        vBoxGraphIL10 = new VBox()
+        vBoxGraphIL10.intercept(1)
+        {
+            graphIL10 = new Graph(0)
+            graphList[1].append(graphIL10)
+            graphIL10.size(0,150,-0.01,0.01)
+            graphIL10.view(0, 0, 150, 5, 1220, 705, 380, 200)
+            graphIL10.addvar("dendrite_ref.o(0).sec.il10_conc_TNFa( 0.5 )", 2, 1, 0.8, 0.9, 2)
+            graphIL10.yaxis(0)
+            graphIL10.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphIL10.label(0.1, 0.09, "IL10 (Fast Feedback)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphIL10.intercept(0)
+        vBoxGraphIL10.map("IL-10 Concentration vs Time", 1220, 705, 380, 200)
+
+        // TGFβ Concentration Graph (Slow Feedback)
+        vBoxGraphTGFb = new VBox()
+        vBoxGraphTGFb.intercept(1)
+        {
+            graphTGFb = new Graph(0)
+            graphList[1].append(graphTGFb)
+            graphTGFb.size(0,150,-0.01,0.01)
+            graphTGFb.view(0, 0, 150, 5, 1610, 705, 380, 200)
+            graphTGFb.addvar("dendrite_ref.o(0).sec.tgfb_conc_TNFa( 0.5 )", 3, 1, 0.8, 0.9, 2)
+            graphTGFb.yaxis(0)
+            graphTGFb.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphTGFb.label(0.1, 0.09, "TGFb (Slow Feedback)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphTGFb.intercept(0)
+        vBoxGraphTGFb.map("TGFb Concentration vs Time", 1610, 705, 380, 200)
+
+        // NFκB Activation Graph
+        vBoxGraphNFkB = new VBox()
+        vBoxGraphNFkB.intercept(1)
+        {
+            graphNFkB = new Graph(0)
+            graphList[1].append(graphNFkB)
+            graphNFkB.size(0,150,-0.01,0.01)
+            graphNFkB.view(0, 0, 150, 1, 2000, 705, 380, 200)
+            graphNFkB.addvar("dendrite_ref.o(0).sec.nfkb_active_TNFa( 0.5 )", 5, 1, 0.8, 0.9, 2)
+            graphNFkB.yaxis(0)
+            graphNFkB.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphNFkB.label(0.1, 0.09, "NFkB Activation", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphNFkB.intercept(0)
+        vBoxGraphNFkB.map("NFkB Activation vs Time", 2000, 705, 380, 200)
+        
+        vBoxPlotShapeLPS = new VBox()
+        vBoxPlotShapeLPS.intercept(1)
+        {
+            plotShapeLPS = new PlotShape(0)
+            fast_flush_list.append(plotShapeLPS)
+            plotShapeLPS.size(-50,50,-50,50)
+            plotShapeLPS.view(-50, -49.9003, 100, 100, 50, 102, 380, 380)
+            plotShapeLPS.exec_menu("Shape Plot")
+            plotShapeLPS.exec_menu("View = plot")
+            plotShapeLPS.variable("lps_stim_TNFa")
+            plotShapeLPS.label(0.5, 0.09, "Applied LPS (ng/ml)", 2, 1, 0, 1, 1)
+            plotShapeLPS.show(0)
+            plotShapeLPS.scale(0,100)
+        }
+        vBoxPlotShapeLPS.intercept(0)
+        vBoxPlotShapeLPS.map("LPS Distribution", 50, 102, 380, 380)
+        
+        vBoxPlotShapeVoltage = new VBox()
+        vBoxPlotShapeVoltage.intercept(1)
+        {
+            plotShapeVoltage = new PlotShape(0)
+            fast_flush_list.append(plotShapeVoltage)
+            plotShapeVoltage.size(-50,50,-50,50)
+            plotShapeVoltage.view(-50, -49.9003, 100, 100, 440, 102, 380, 380)
+            plotShapeVoltage.exec_menu("Shape Plot")
+            plotShapeVoltage.exec_menu("View = plot")
+            plotShapeVoltage.variable("v")
+            plotShapeVoltage.label(0.1, 0.99, "Transmembrane Voltage (mV)", 2, 1, 0, 1, 1)
+            plotShapeVoltage.show(0)
+            plotShapeVoltage.scale(-50, 50)
+        }
+        vBoxPlotShapeVoltage.intercept(0)
+        vBoxPlotShapeVoltage.map("Voltage", 440, 102, 380, 380)
+        
+        vBoxPlotShapeTNF = new VBox()
+        vBoxPlotShapeTNF.intercept(1)
+        {
+            plotShapeTNF = new PlotShape(0)
+            fast_flush_list.append(plotShapeTNF)
+            plotShapeTNF.size(-50,50,-50,50)
+            plotShapeTNF.view(-50, -49.9003, 100, 100, 830, 102, 380, 380)
+            plotShapeTNF.exec_menu("Shape Plot")
+            plotShapeTNF.exec_menu("View = plot")
+            plotShapeTNF.variable("tnf_conc_TNFa")
+            plotShapeTNF.label(0.15, 0.99, "TNFa (pg/ml)", 2, 1, 0, 1, 1)
+            plotShapeTNF.show(0)
+            plotShapeTNF.scale(0,10)
+        }
+        vBoxPlotShapeTNF.intercept(0)
+        vBoxPlotShapeTNF.map("TNFa Concentration", 830, 102, 380, 380)
+    }
+    
+endtemplate SimTNFa
+
+
+// Updates TNFa LPS stimulation on the cell.
+// $1 - X coordinate circle center
+// $2 - Y coordinate circle center  
+// $3 - Radius of stimulation area
+// $4 - TimeBegin
+// $5 - Time of LPS rise
+// $6 - Maximum LPS (ng/ml)
+// $7 - PX2 (second stimulation site offset)
+// $8 - LPS sensitivity
+// $9 - Time decay
+// $10 - Z coordinate circle center
+// Updates TNFa LPS stimulation on the cell.
+proc TNFaIteration() { local tau1, tau2, BaselineLPS, dist_sq1, dist_sq2, z_diff, lps_profile
+    tau1 = $5
+    tau2 = $9
+    BaselineLPS = 0
+    
+    forall {
+        // Check if the section has the TNFa mechanism
+        if (ismembrane("TNFa")) {
+            // Calculate distances
+            dist_sq1 = dist2D_PtToPt_squared($1, $2, x3d(1), y3d(1))
+            dist_sq2 = dist2D_PtToPt_squared($1+$7, $2, x3d(1), y3d(1))
+            z_diff = abs($10-z3d(1))
+            
+            // Check if within stimulation area
+            if (((dist_sq1 < $3^2) || (dist_sq2 < $3^2)) && (z_diff < 10) && (t > $4)) {
+                // Apply LPS with double exponential
+                if (tau2 != tau1) {
+                    lps_profile = BaselineLPS + $6*(tau2/(tau2-tau1)*(-exp(-(t-$4)/tau1) + exp(-(t-$4)/tau2)))
+                } else {
+                    lps_profile = BaselineLPS + $6*((t-$4)/tau1)*exp(-(t-$4)/tau1)
+                }
+                
+                // Apply threshold
+                if (lps_profile > lps_threshold_TNFa) {
+                    lps_stim_TNFa = lps_profile
+                } else {
+                    lps_stim_TNFa = 0
+                }
+            } else {
+                lps_stim_TNFa = BaselineLPS
+            }
+            
+            lps_sensitivity_TNFa = $8
+        }
+    }
+}
