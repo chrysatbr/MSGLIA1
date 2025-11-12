@@ -16,11 +16,11 @@
         "ca_ion": {},
         "Piezo2": {
             "PARAMETER": {
-                "density_Piezo2": 2e7,
+                "density_Piezo2": 1.5e8,
                 "mforce_Piezo2": 0,
-                "force_sensitivity_Piezo2": 0.03,
+                "force_sensitivity_Piezo2": 0.08,
                 "force_threshold_Piezo2": 0.3,
-                "g_single_Piezo2": 25e-12,
+                "g_single_Piezo2": 30e-12,
                 "pca_Piezo2": 1.0,
                 "pna_Piezo2": 0.12,
                 "pk_Piezo2": 0.09
@@ -46,9 +46,9 @@
             "PARAMETER": {
                 "density_Piezo2": 8e7,
                 "mforce_Piezo2": 0,
-                "force_sensitivity_Piezo2": 0.04,
-                "force_threshold_Piezo2": 0.2,
-                "g_single_Piezo2": 25e-12,
+                "force_sensitivity_Piezo2": 0.08,
+                "force_threshold_Piezo2": 0.3,
+                "g_single_Piezo2": 30e-12,
                 "pca_Piezo2": 1.0,
                 "pna_Piezo2": 0.12,
                 "pk_Piezo2": 0.09
@@ -72,11 +72,11 @@
         "ca_ion": {},
         "Piezo2": {
             "PARAMETER": {
-                "density_Piezo2": 1e7,
+                "density_Piezo2": 1.5e7,
                 "mforce_Piezo2": 0,
-                "force_sensitivity_Piezo2": 0.02,
-                "force_threshold_Piezo2": 0.8,
-                "g_single_Piezo2": 25e-12,
+                "force_sensitivity_Piezo2": 0.07,
+                "force_threshold_Piezo2": 0.5,
+                "g_single_Piezo2": 30e-12,
                 "pca_Piezo2": 1.0,
                 "pna_Piezo2": 0.12,
                 "pk_Piezo2": 0.09
@@ -100,11 +100,11 @@
         "ca_ion": {},
         "Piezo2": {
             "PARAMETER": {
-                "density_Piezo2": 1e7,
+                "density_Piezo2": 2.5e8,
                 "mforce_Piezo2": 0,
-                "force_sensitivity_Piezo2": 0.025,
-                "force_threshold_Piezo2": 0.8,
-                "g_single_Piezo2": 25e-12,
+                "force_sensitivity_Piezo2": 0.09,
+                "force_threshold_Piezo2": 0.25,
+                "g_single_Piezo2": 30e-12,
                 "pca_Piezo2": 1.0,
                 "pna_Piezo2": 0.12,
                 "pk_Piezo2": 0.09
