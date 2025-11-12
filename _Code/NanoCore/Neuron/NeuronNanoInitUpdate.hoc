@@ -1,0 +1,8 @@
+
+proc reseedNeuronNanoBranches() {
+    nanoBranchesManager.reseedBranches(createVecOfVals(isUniformOrNormalSpineGeometry))
+}
+
+proc UpdateSpines() {
+    nanoBranchesManager.updateBranches(createVecOfVals(isUniformOrNormalSpineGeometry))
+}
