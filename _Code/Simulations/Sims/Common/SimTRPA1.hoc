@@ -1,0 +1,416 @@
+
+objref geomMath
+geomMath = new List()
+
+func dist2D_PtToPt_squared() {
+    return ($1-$3)*($1-$3) + ($2-$4)*($2-$4)
+}
+
+// ΜΕΤΑΚΙΝΗΣΤΕ ΕΔΩ την TRPA1Iteration (από γραμμή 385)
+proc TRPA1Iteration() { local tau1, tau2, BaselineOxStress, dist_sq1, dist_sq2, z_diff, oxstress_profile
+    tau1 = $5
+    tau2 = $8
+    BaselineOxStress = 0
+    
+    forall {
+        if (ismembrane("trpa1")) {
+            dist_sq1 = dist2D_PtToPt_squared($1, $2, x3d(1), y3d(1))
+            dist_sq2 = dist2D_PtToPt_squared($1+$7, $2, x3d(1), y3d(1))
+            z_diff = abs($9-z3d(1))
+            
+            if (((dist_sq1 < $3^2) || (dist_sq2 < $3^2)) && (z_diff < 10) && (t > $4)) {
+                if (tau2 != tau1) {
+                    oxstress_profile = BaselineOxStress + $6*(tau2/(tau2-tau1)*(-exp(-(t-$4)/tau1) + exp(-(t-$4)/tau2)))
+                } else {
+                    oxstress_profile = BaselineOxStress + $6*((t-$4)/tau1)*exp(-(t-$4)/tau1)
+                }
+                
+                if (oxstress_profile < 0) {
+                    oxstress_profile = 0
+                }
+                if (oxstress_profile > 1) {
+                    oxstress_profile = 1
+                }
+                
+                oxidative_stress_trpa1 = oxstress_profile
+            } else {
+                oxidative_stress_trpa1 = BaselineOxStress
+            }
+            
+            agonist_conc_trpa1 = $10
+            antagonist_conc_trpa1 = $11
+        }
+    }
+}
+begintemplate SimTRPA1
+    
+    public preShowCheck, show, preRun, preContinue, advance, postRun, simDismissHandler
+    public biophysJsonFileNameOrEmpty, isCustomProcAdvance, isAltRunControl
+    
+    public PX, PY, PZ, R_STIM, TimeBegin, MaxOxidativeStress, PX2, Tau1, Tau2
+    public AgonistConc, AntagonistConc, Temperature
+    
+    external TRPA1Iteration
+    external seClampHelper
+    external altRunControlWidget
+    external tstop
+    external removeItemFromList, unmapIfNotNil
+    external dendrite_ref
+    external graphList, fast_flush_list
+    
+    strdef biophysJsonFileNameOrEmpty
+    isCustomProcAdvance = -1
+    isAltRunControl = -1
+    strdef outTxtFileRelPathName
+
+	
+    objref vBoxTRPA1Main, vBoxGraphSEClamp, vBoxGraphOxidativeStress, vBoxGraphCaConc
+    objref vBoxGraphSpottySignals, vBoxGraphOpenProb
+    objref vBoxPlotShapeVoltage, vBoxPlotShapeOxidativeStress, vBoxPlotShapeTRPA1, vBoxPlotShapeCa
+    objref graphSEClamp, graphOxidativeStress, graphCaConc, graphSpottySignals, graphOpenProb
+    objref plotShapeVoltage, plotShapeOxidativeStress, plotShapeTRPA1, plotShapeCa
+
+    
+    objref fileTRPA1Results
+    
+    proc init() {
+        biophysJsonFileNameOrEmpty = "SimTRPA1.json"
+        isCustomProcAdvance = 1
+        isAltRunControl = 1
+        
+        outTxtFileRelPathName = "Text results/TRPA1_dynamics.txt"
+        
+        fileTRPA1Results = new File()
+    }
+    
+    func preShowCheck() {
+        return 0
+    }
+    
+    proc show() {
+        initParamsTRPA1()
+        seClampHelper.deployClamp(0)
+        showTRPA1Ui()
+    }
+    
+    // Updates TRPA1 activation with oxidative stress stimulation
+    proc advance() {
+        fadvance()
+        TRPA1Iteration(PX, PY, R_STIM, TimeBegin, Tau1, MaxOxidativeStress, PX2, Tau2, PZ, AgonistConc, AntagonistConc, Temperature)
+        graphSEClamp.exec_menu("View = plot")
+        graphOxidativeStress.exec_menu("View = plot")
+        graphCaConc.exec_menu("View = plot")
+        graphSpottySignals.exec_menu("View = plot")
+        graphOpenProb.exec_menu("View = plot")
+        plotShapeOxidativeStress.exec_menu("View = plot")
+        plotShapeTRPA1.exec_menu("View = plot")
+        
+        // Write data to file: time, oxidative_stress, cai, open_probability, spotty_amplitude, i_trpa1
+        fileTRPA1Results.printf("%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\n", t, dendrite_ref.o(0).sec.oxidative_stress_trpa1(0.5), dendrite_ref.o(0).sec.cai(0.5), dendrite_ref.o(0).sec.open_probability_trpa1(0.5), dendrite_ref.o(0).sec.spotty_amplitude_trpa1(0.5), dendrite_ref.o(0).sec.ica_trpa1(0.5))
+    }
+    
+    proc preRun() {
+        fileTRPA1Results.wopen(outTxtFileRelPathName)
+    }
+    
+    proc preContinue() {
+        fileTRPA1Results.aopen(outTxtFileRelPathName)
+    }
+    
+    proc postRun() {
+        fileTRPA1Results.close()
+        print "TRPA1 results saved to: ", outTxtFileRelPathName
+    }
+    
+    proc simDismissHandler() {
+        removeItemFromList(graphList[1], graphOxidativeStress)
+        removeItemFromList(graphList[1], graphSEClamp)
+        removeItemFromList(graphList[1], graphCaConc)
+        removeItemFromList(graphList[1], graphSpottySignals)
+        removeItemFromList(graphList[1], graphOpenProb)
+        removeItemFromList(fast_flush_list, plotShapeOxidativeStress)
+        removeItemFromList(fast_flush_list, plotShapeVoltage)
+        removeItemFromList(fast_flush_list, plotShapeTRPA1)
+        removeItemFromList(fast_flush_list, plotShapeCa)
+        
+        unmapIfNotNil(vBoxTRPA1Main)
+        unmapIfNotNil(vBoxGraphSEClamp)
+        unmapIfNotNil(vBoxGraphOxidativeStress)
+        unmapIfNotNil(vBoxGraphCaConc)
+        unmapIfNotNil(vBoxGraphSpottySignals)
+        unmapIfNotNil(vBoxGraphOpenProb)
+        unmapIfNotNil(vBoxPlotShapeVoltage)
+        unmapIfNotNil(vBoxPlotShapeOxidativeStress)
+        unmapIfNotNil(vBoxPlotShapeTRPA1)
+        unmapIfNotNil(vBoxPlotShapeCa)
+        
+        seClampHelper.removeClamp()
+    }
+    
+    proc initParamsTRPA1() {
+        // Parameters for TRPA1/Oxidative Stress stimulation - astrocyte/microglia response
+        PX = 0                          // X-coordinate of stimulation site
+        PY = -20                        // Y-coordinate of stimulation site  
+        PZ = 0                          // Z-coordinate of stimulation site
+        PX2 = 0                         // Distance in x-coordinate of second stimulation site
+        R_STIM = 5.0                    // Radius of oxidative stress stimulation
+        TimeBegin = 100                 // Time of stimulation onset (ms)
+        Tau1 = 50                       // Rise time of oxidative stress
+        Tau2 = 500                      // Decay time of oxidative stress
+        MaxOxidativeStress = 1.0        // Maximum oxidative stress level (normalized)
+        
+        // Pharmacological modulation
+        AgonistConc = 0                 // TRPA1 agonist (AITC) in μM
+        AntagonistConc = 0              // TRPA1 antagonist (HC030031) in μM
+        Temperature = 37                // Temperature in °C (TRPA1 has thermal sensitivity)
+
+        forall {
+            if (ismembrane("trpa1")) {
+                // Intracellular calcium concentration (mM) - baseline from Shigetomi 2012
+                cai = 0.00007   // 70 nM baseline calcium
+                
+                // Initialize TRPA1 channel parameters
+                g_trpa1 = 0.00015               // Conductance (S/cm2) - astrocyte soma
+                pca_trpa1 = 1.0                 // Ca2+ permeability
+                pna_trpa1 = 0.1                 // Na+ permeability  
+                pk_trpa1 = 0.08                 // K+ permeability
+                
+                // Activation/deactivation kinetics
+                tau_activation_trpa1 = 50       // Activation time constant (ms)
+                tau_deactivation_trpa1 = 200    // Deactivation time constant (ms)
+                tau_desens_trpa1 = 2000         // Desensitization time constant (ms)
+                
+                // Basal activity (constitutive opening)
+                basal_open_prob_trpa1 = 0.05    // 5% basal open probability
+                
+                // Spotty Ca2+ signal parameters (Shigetomi 2012)
+                tau_rise_spotty_trpa1 = 100     // Rise time (ms)
+                tau_decay_spotty_trpa1 = 500    // Decay time (ms)
+                spotty_frequency_trpa1 = 0.49   // Frequency (events/min) - control condition
+                
+                // Sensitivity parameters
+                agonist_sensitivity_trpa1 = 2.0
+                blocker_sensitivity_trpa1 = 5.0
+                oxidative_sensitivity_trpa1 = 1.5
+                temp_sensitivity_trpa1 = 0.03   // Per degree C above threshold
+                
+                // Initialize external concentrations
+                oxidative_stress_trpa1 = 0      // Oxidative stress level (0-1)
+                agonist_conc_trpa1 = 0          // Agonist concentration
+                antagonist_conc_trpa1 = 0       // Antagonist concentration
+                temperature_trpa1 = 37          // Temperature (°C)
+            }
+        }
+    }
+    
+    // Shows TRPA1 simulation UI
+    proc showTRPA1Ui() {
+        vBoxTRPA1Main = new VBox()
+        vBoxTRPA1Main.intercept(1)
+        {
+            xpanel("")
+            xlabel("=============== TRPA1 Channel - Astrocyte/Microglia Activation ===============")
+            xlabel("Includes: Oxidative stress response, Ca2+ dynamics, Spotty Ca2+ signals")
+            xlabel("          Based on Shigetomi et al. 2012 - Nature Neuroscience")
+            xlabel("================================================================================")
+            
+            xlabel("=================== Spatial Parameters ===================")
+            xpvalue("X coordinate (um)", &PX, 1)
+            xpvalue("Y coordinate (um)", &PY, 1)
+            xpvalue("Z coordinate (um)", &PZ, 1)
+            xpvalue("Stimulation radius (um)", &R_STIM, 1)
+            xpvalue("Distance between two sites (um)", &PX2, 1)
+            xlabel("================================================================================")
+            
+            xlabel("=================== Oxidative Stress Profile ===================")
+            xpvalue("Maximum Oxidative Stress (0-1)", &MaxOxidativeStress, 1)
+            xpvalue("Tau rise (ms)", &Tau1, 1)
+            xpvalue("Tau decay (ms)", &Tau2, 1)
+            xlabel("================================================================================")
+            
+            xlabel("================= Pharmacological Modulation =================")
+            xpvalue("TRPA1 Agonist (AITC)", &AgonistConc, 1)
+            xpvalue("TRPA1 Antagonist (HC030031)", &AntagonistConc, 1)
+            xpvalue("Temperature", &Temperature, 1)
+            xlabel("================================================================================")
+	      
+            xlabel("================== Voltage clamp of soma ==================")
+            xpvalue("Somatic voltage clamp", &seClampHelper.seClamp.amp1, 1)
+            xpvalue("Clamp duration", &seClampHelper.seClamp.dur1, 1)
+           
+            xpvalue("Simulation time (ms)", &tstop, 1)
+            xbutton("Run simulation", "altRunControlWidget.initAndRunHandler()")
+            xpanel()
+        }
+        vBoxTRPA1Main.intercept(0)
+        vBoxTRPA1Main.map("TRPA1 Parameters", 30, 102, 400, 650)
+        
+        
+        // Voltage clamp graph
+        vBoxGraphSEClamp = new VBox()
+        vBoxGraphSEClamp.intercept(1)
+        {
+            graphSEClamp = new Graph(0)
+            graphList[1].append(graphSEClamp)
+            graphSEClamp.size(0,150,-0.1,0.1)
+            graphSEClamp.view(0, -0.1, 150, 0.2, 440, 102, 380, 200)
+            graphSEClamp.addvar("dendrite_ref.o(0).sec.v( 0.5 )", 1, 1, 0.8, 0.9, 2)
+            graphSEClamp.yaxis(0)
+            graphSEClamp.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphSEClamp.label(0.1, 0.09, "Voltage (mV)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphSEClamp.intercept(0)
+        vBoxGraphSEClamp.map("Voltage vs Time", 440, 102, 380, 200)
+        
+        // Oxidative Stress Graph
+        vBoxGraphOxidativeStress = new VBox()
+        vBoxGraphOxidativeStress.intercept(1)
+        {
+            graphOxidativeStress = new Graph(0)
+            graphList[1].append(graphOxidativeStress)
+            graphOxidativeStress.size(0,1500,0,1.2)
+            graphOxidativeStress.view(0, 0, 1500, 1.2, 830, 102, 380, 200)
+            graphOxidativeStress.addvar("dendrite_ref.o(0).sec.oxidative_stress_trpa1( 0.5 )", 2, 1, 0.8, 0.9, 2)
+            graphOxidativeStress.yaxis(0)
+            graphOxidativeStress.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphOxidativeStress.label(0.1, 0.09, "Oxidative Stress (0-1)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphOxidativeStress.intercept(0)
+        vBoxGraphOxidativeStress.map("Oxidative Stress vs Time", 830, 102, 380, 200)
+        
+        // Calcium Concentration Graph (μM)
+        vBoxGraphCaConc = new VBox()
+        vBoxGraphCaConc.intercept(1)
+        {
+            graphCaConc = new Graph(0)
+            graphList[1].append(graphCaConc)
+            graphCaConc.size(0,1500,0,0.3)
+            graphCaConc.view(0, 0, 1500, 0.3, 1220, 102, 380, 200)
+            graphCaConc.addvar("dendrite_ref.o(0).sec.cai( 0.5 )", 3, 1, 0.8, 0.9, 2)
+            graphCaConc.yaxis(0)
+            graphCaConc.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphCaConc.label(0.1, 0.09, "[Ca2+]i (mM)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphCaConc.intercept(0)
+        vBoxGraphCaConc.map("Ca2+ Concentration vs Time", 1220, 102, 380, 200)
+
+        // Spotty Ca2+ Signals Graph
+        vBoxGraphSpottySignals = new VBox()
+        vBoxGraphSpottySignals.intercept(1)
+        {
+            graphSpottySignals = new Graph(0)
+            graphList[1].append(graphSpottySignals)
+            graphSpottySignals.size(0,1500,0,0.5)
+            graphSpottySignals.view(0, 0, 1500, 0.5, 1610, 102, 380, 200)
+            graphSpottySignals.addvar("dendrite_ref.o(0).sec.spotty_amplitude_trpa1( 0.5 )", 4, 1, 0.8, 0.9, 2)
+            graphSpottySignals.yaxis(0)
+            graphSpottySignals.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphSpottySignals.label(0.1, 0.09, "Spotty Signal Amplitude", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphSpottySignals.intercept(0)
+        vBoxGraphSpottySignals.map("Spotty Ca2+ Signals vs Time", 1610, 102, 380, 200)
+
+        // TRPA1 Open Probability Graph
+        vBoxGraphOpenProb = new VBox()
+        vBoxGraphOpenProb.intercept(1)
+        {
+            graphOpenProb = new Graph(0)
+            graphList[1].append(graphOpenProb)
+            graphOpenProb.size(0,1500,0,1)
+            graphOpenProb.view(0, 0, 1500, 1, 2000, 102, 380, 200)
+            graphOpenProb.addvar("dendrite_ref.o(0).sec.open_probability_trpa1( 0.5 )", 5, 1, 0.8, 0.9, 2)
+            graphOpenProb.yaxis(0)
+            graphOpenProb.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
+            graphOpenProb.label(0.1, 0.09, "Open Probability", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphOpenProb.intercept(0)
+        vBoxGraphOpenProb.map("TRPA1 Open Probability vs Time", 2000, 102, 380, 200)
+        
+        // PlotShapes
+        vBoxPlotShapeOxidativeStress = new VBox()
+        vBoxPlotShapeOxidativeStress.intercept(1)
+        {
+            plotShapeOxidativeStress = new PlotShape(0)
+            fast_flush_list.append(plotShapeOxidativeStress)
+            plotShapeOxidativeStress.size(-50,50,-50,50)
+            plotShapeOxidativeStress.view(-50, -49.9003, 100, 100, 50, 312, 380, 380)
+            plotShapeOxidativeStress.exec_menu("Shape Plot")
+            plotShapeOxidativeStress.exec_menu("View = plot")
+            plotShapeOxidativeStress.variable("oxidative_stress_trpa1")
+            plotShapeOxidativeStress.label(0.5, 0.09, "Oxidative Stress (0-1)", 2, 1, 0, 1, 1)
+            plotShapeOxidativeStress.show(0)
+            plotShapeOxidativeStress.scale(0,1)
+        }
+        vBoxPlotShapeOxidativeStress.intercept(0)
+        vBoxPlotShapeOxidativeStress.map("Oxidative Stress Distribution", 50, 312, 380, 380)
+        
+        vBoxPlotShapeVoltage = new VBox()
+        vBoxPlotShapeVoltage.intercept(1)
+        {
+            plotShapeVoltage = new PlotShape(0)
+            fast_flush_list.append(plotShapeVoltage)
+            plotShapeVoltage.size(-50,50,-50,50)
+            plotShapeVoltage.view(-50, -49.9003, 100, 100, 440, 312, 380, 380)
+            plotShapeVoltage.exec_menu("Shape Plot")
+            plotShapeVoltage.exec_menu("View = plot")
+            plotShapeVoltage.variable("v")
+            plotShapeVoltage.label(0.1, 0.99, "Transmembrane Voltage (mV)", 2, 1, 0, 1, 1)
+            plotShapeVoltage.show(0)
+            plotShapeVoltage.scale(-87, -80)
+        }
+        vBoxPlotShapeVoltage.intercept(0)
+        vBoxPlotShapeVoltage.map("Voltage", 440, 312, 380, 380)
+        
+        vBoxPlotShapeTRPA1 = new VBox()
+        vBoxPlotShapeTRPA1.intercept(1)
+        {
+            plotShapeTRPA1 = new PlotShape(0)
+            fast_flush_list.append(plotShapeTRPA1)
+            plotShapeTRPA1.size(-50,50,-50,50)
+            plotShapeTRPA1.view(-50, -49.9003, 100, 100, 830, 312, 380, 380)
+            plotShapeTRPA1.exec_menu("Shape Plot")
+            plotShapeTRPA1.exec_menu("View = plot")
+            plotShapeTRPA1.variable("open_probability_trpa1")
+            plotShapeTRPA1.label(0.15, 0.99, "TRPA1 Open Probability", 2, 1, 0, 1, 1)
+            plotShapeTRPA1.show(0)
+            plotShapeTRPA1.scale(0,1)
+        }
+        vBoxPlotShapeTRPA1.intercept(0)
+        vBoxPlotShapeTRPA1.map("TRPA1 Channel Activity", 830, 312, 380, 380)
+        
+        // Calcium concentration PlotShape
+        vBoxPlotShapeCa = new VBox()
+        vBoxPlotShapeCa.intercept(1)
+        {
+            plotShapeCa = new PlotShape(0)
+            fast_flush_list.append(plotShapeCa)
+            plotShapeCa.size(-50,50,-50,50)
+            plotShapeCa.view(-50, -49.9003, 100, 100, 1220, 312, 380, 380)
+            plotShapeCa.exec_menu("Shape Plot")
+            plotShapeCa.exec_menu("View = plot")
+            plotShapeCa.variable("cai")
+            plotShapeCa.label(0.15, 0.99, "[Ca2+]i (mM)", 2, 1, 0, 1, 1)
+            plotShapeCa.show(0)
+            plotShapeCa.scale(0, 0.0003)
+        }
+        vBoxPlotShapeCa.intercept(0)
+        vBoxPlotShapeCa.map("Ca2+ Distribution", 1220, 312, 380, 380)
+    }
+
+    
+endtemplate SimTRPA1
+
+
+// Updates TRPA1 activation with oxidative stress, agonist, antagonist, and temperature
+// $1 - X coordinate circle center
+// $2 - Y coordinate circle center  
+// $3 - Radius of stimulation area
+// $4 - TimeBegin
+// $5 - Tau1 (rise time)
+// $6 - Maximum Oxidative Stress (0-1)
+// $7 - PX2 (second stimulation site offset)
+// $8 - Tau2 (decay time)
+// $9 - Z coordinate circle center
+// $10 - Agonist concentration (μM)
+// $11 - Antagonist concentration (μM)
+// $12 - Temperature (°C)
