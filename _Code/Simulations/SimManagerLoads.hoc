@@ -32,6 +32,7 @@ sourcePythonCode("\\Sims\\Common\\SimLocalFieldPotential", "from SimLocalFieldPo
 { load_file("Sims/Common/SimIl1b.hoc") }
 { load_file("Sims/Common/SimIL6.hoc") }
 { load_file("Sims/Common/SimTRPV4.hoc") }
+{ load_file("Sims/Common/SimTRPA1.hoc") }
 
 // !! deprecated: get rid of this file in favour of BiophysExportImportHelper and JSON files once we:
 //    (1) export/import density_GluTrans inhom model in the same way as for g_pas;
