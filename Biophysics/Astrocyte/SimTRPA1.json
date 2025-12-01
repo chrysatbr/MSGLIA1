@@ -1,0 +1,162 @@
+{
+    "Soma": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 1.0
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 1e-4,
+                "e_pas (mV)": -85.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "trpa1": {
+            "PARAMETER": {
+                "g_trpa1": 0.00015,
+                "pca_trpa1": 1.0,
+                "pna_trpa1": 0.1,
+                "pk_trpa1": 0.08,
+                "tau_activation_trpa1": 50,
+                "tau_deactivation_trpa1": 200,
+                "tau_desens_trpa1": 2000,
+                "basal_open_prob_trpa1": 0.05,
+                "tau_rise_spotty_trpa1": 100,
+                "tau_decay_spotty_trpa1": 500,
+                "spotty_frequency_trpa1": 0.49,
+                "spotty_ca_scale_trpa1": 0.0001,
+                "agonist_sensitivity_trpa1": 2.0,
+                "blocker_sensitivity_trpa1": 5.0,
+                "oxidative_sensitivity_trpa1": 1.5,
+                "temp_sensitivity_trpa1": 0.03,
+                "temp_coefficient_trpa1": 2.5,
+                "oxidative_stress_trpa1": 0,
+                "agonist_conc_trpa1": 0,
+                "antagonist_conc_trpa1": 0
+            }
+        }
+    },
+    "Dendrites": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 1.0
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 1e-4,
+                "e_pas (mV)": -85.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "trpa1": {
+            "PARAMETER": {
+                "g_trpa1": 0.0003,
+                "pca_trpa1": 1.0,
+                "pna_trpa1": 0.1,
+                "pk_trpa1": 0.08,
+                "tau_activation_trpa1": 50,
+                "tau_deactivation_trpa1": 200,
+                "tau_desens_trpa1": 2000,
+                "basal_open_prob_trpa1": 0.05,
+                "tau_rise_spotty_trpa1": 100,
+                "tau_decay_spotty_trpa1": 500,
+                "spotty_frequency_trpa1": 0.8,
+                "spotty_ca_scale_trpa1": 0.0001,
+                "agonist_sensitivity_trpa1": 2.0,
+                "blocker_sensitivity_trpa1": 5.0,
+                "oxidative_sensitivity_trpa1": 1.5,
+                "temp_sensitivity_trpa1": 0.03,
+                "temp_coefficient_trpa1": 2.5,
+                "oxidative_stress_trpa1": 0,
+                "agonist_conc_trpa1": 0,
+                "antagonist_conc_trpa1": 0
+            }
+        }
+    },
+    "Small Glia": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 0.8
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 1e-4,
+                "e_pas (mV)": -85.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "trpa1": {
+            "PARAMETER": {
+                "g_trpa1": 0.00008,
+                "pca_trpa1": 1.0,
+                "pna_trpa1": 0.1,
+                "pk_trpa1": 0.08,
+                "tau_activation_trpa1": 50,
+                "tau_deactivation_trpa1": 200,
+                "tau_desens_trpa1": 2000,
+                "basal_open_prob_trpa1": 0.03,
+                "tau_rise_spotty_trpa1": 100,
+                "tau_decay_spotty_trpa1": 500,
+                "spotty_frequency_trpa1": 0.2,
+                "spotty_ca_scale_trpa1": 0.0001,
+                "agonist_sensitivity_trpa1": 2.0,
+                "blocker_sensitivity_trpa1": 5.0,
+                "oxidative_sensitivity_trpa1": 1.2,
+                "temp_sensitivity_trpa1": 0.03,
+                "temp_coefficient_trpa1": 2.5,
+                "oxidative_stress_trpa1": 0,
+                "agonist_conc_trpa1": 0,
+                "antagonist_conc_trpa1": 0
+            }
+        }
+    },
+    "Large Glia": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 0.8
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 1e-4,
+                "e_pas (mV)": -85.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "trpa1": {
+            "PARAMETER": {
+                "g_trpa1": 0.00025,
+                "pca_trpa1": 1.0,
+                "pna_trpa1": 0.1,
+                "pk_trpa1": 0.08,
+                "tau_activation_trpa1": 50,
+                "tau_deactivation_trpa1": 200,
+                "tau_desens_trpa1": 2000,
+                "basal_open_prob_trpa1": 0.08,
+                "tau_rise_spotty_trpa1": 100,
+                "tau_decay_spotty_trpa1": 500,
+                "spotty_frequency_trpa1": 1.2,
+                "spotty_ca_scale_trpa1": 0.0001,
+                "agonist_sensitivity_trpa1": 2.0,
+                "blocker_sensitivity_trpa1": 5.0,
+                "oxidative_sensitivity_trpa1": 2.0,
+                "temp_sensitivity_trpa1": 0.03,
+                "temp_coefficient_trpa1": 2.5,
+                "oxidative_stress_trpa1": 0,
+                "agonist_conc_trpa1": 0,
+                "antagonist_conc_trpa1": 0
+            }
+        }
+    }
+}
