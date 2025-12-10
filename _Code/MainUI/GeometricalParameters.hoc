@@ -7,6 +7,20 @@ objref vecVolSphereRatio, vecSurfVolRatio, vecDistance, vecVolume, vecSurface, v
 objref f1
 f1 = new File()
 
+// Geometry mathematics helper object
+begintemplate GeomMath
+public len2D
+
+// Calculate 2D Euclidean distance from origin
+func len2D() {
+    return sqrt($1*$1 + $2*$2)
+}
+
+endtemplate GeomMath
+
+objref geomMath
+geomMath = new GeomMath()
+
 // Returns graph with default parameters for all plots.
 // $o1 - X data
 // $o2 - Y data
