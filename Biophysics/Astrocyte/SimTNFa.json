@@ -7,7 +7,7 @@
         },
         "pas": {
             "PARAMETER": {
-                "g_pas (S/cm2)": 1e-4,
+                "g_pas (S/cm2)": 0.0001,
                 "e_pas (mV)": -70.0
             }
         },
@@ -50,7 +50,10 @@
                 "g_tnf_TNFa": 0.0001,
                 "pca_TNFa": 1.0,
                 "pna_TNFa": 0.1,
-                "pk_TNFa": 0.08
+                "pk_TNFa": 0.08,
+                "geometry_scale_mode_TNFa": 1,
+                "reference_diameter_TNFa": 1.0,
+                "geometry_scaling_factor_TNFa": 1.0
             }
         }
     },
@@ -62,7 +65,7 @@
         },
         "pas": {
             "PARAMETER": {
-                "g_pas (S/cm2)": 1e-4,
+                "g_pas (S/cm2)": 0.0001,
                 "e_pas (mV)": -70.0
             }
         },
@@ -105,7 +108,10 @@
                 "g_tnf_TNFa": 0.0001,
                 "pca_TNFa": 1.0,
                 "pna_TNFa": 0.1,
-                "pk_TNFa": 0.08
+                "pk_TNFa": 0.08,
+                "geometry_scale_mode_TNFa": 1,
+                "reference_diameter_TNFa": 1.0,
+                "geometry_scaling_factor_TNFa": 1.0
             }
         }
     },
@@ -117,7 +123,7 @@
         },
         "pas": {
             "PARAMETER": {
-                "g_pas (S/cm2)": 1e-4,
+                "g_pas (S/cm2)": 0.0001,
                 "e_pas (mV)": -85.0
             }
         },
@@ -129,7 +135,7 @@
                 "lps_stim_TNFa": 0,
                 "lps_sensitivity_TNFa": 0.15,
                 "lps_threshold_TNFa": 0.5,
-                "ca_threshold_TNFa": 0.00005,
+                "ca_threshold_TNFa": 5e-05,
                 "ca_sensitivity_TNFa": 2.5,
                 "basal_production_TNFa": 0.05,
                 "max_production_TNFa": 15.0,
@@ -160,7 +166,10 @@
                 "g_tnf_TNFa": 0.00015,
                 "pca_TNFa": 1.0,
                 "pna_TNFa": 0.1,
-                "pk_TNFa": 0.08
+                "pk_TNFa": 0.08,
+                "geometry_scale_mode_TNFa": 1,
+                "reference_diameter_TNFa": 1.0,
+                "geometry_scaling_factor_TNFa": 1.0
             }
         }
     },
@@ -184,7 +193,7 @@
                 "lps_stim_TNFa": 0,
                 "lps_sensitivity_TNFa": 0.2,
                 "lps_threshold_TNFa": 0.3,
-                "ca_threshold_TNFa": 0.00003,
+                "ca_threshold_TNFa": 3e-05,
                 "ca_sensitivity_TNFa": 3.0,
                 "basal_production_TNFa": 0.1,
                 "max_production_TNFa": 25.0,
@@ -215,7 +224,10 @@
                 "g_tnf_TNFa": 0.0002,
                 "pca_TNFa": 1.0,
                 "pna_TNFa": 0.1,
-                "pk_TNFa": 0.08
+                "pk_TNFa": 0.08,
+                "geometry_scale_mode_TNFa": 1,
+                "reference_diameter_TNFa": 1.0,
+                "geometry_scaling_factor_TNFa": 1.0
             }
         }
     }

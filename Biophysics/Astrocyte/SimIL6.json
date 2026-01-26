@@ -7,7 +7,7 @@
         },
         "pas": {
             "PARAMETER": {
-                "g_pas (S/cm2)": 1e-4,
+                "g_pas (S/cm2)": 0.0001,
                 "e_pas (mV)": -70.0
             }
         },
@@ -44,10 +44,13 @@
                 "stat3_activation_rate_IL6": 0.06,
                 "translation_delay_factor_IL6": 0.1,
                 "secretion_rate_IL6": 0.04,
-                "g_il6_IL6": 0.00008,
+                "g_il6_IL6": 8e-05,
                 "pca_IL6": 1.0,
                 "pna_IL6": 0.1,
-                "pk_IL6": 0.08
+                "pk_IL6": 0.08,
+                "geometry_scale_mode_IL6": 1,
+                "reference_diameter_IL6": 1.0,
+                "geometry_scaling_factor_IL6": 1.0
             }
         }
     },
@@ -59,7 +62,7 @@
         },
         "pas": {
             "PARAMETER": {
-                "g_pas (S/cm2)": 1e-4,
+                "g_pas (S/cm2)": 0.0001,
                 "e_pas (mV)": -70.0
             }
         },
@@ -96,10 +99,13 @@
                 "stat3_activation_rate_IL6": 0.06,
                 "translation_delay_factor_IL6": 0.1,
                 "secretion_rate_IL6": 0.04,
-                "g_il6_IL6": 0.00008,
+                "g_il6_IL6": 8e-05,
                 "pca_IL6": 1.0,
                 "pna_IL6": 0.1,
-                "pk_IL6": 0.08
+                "pk_IL6": 0.08,
+                "geometry_scale_mode_IL6": 1,
+                "reference_diameter_IL6": 1.0,
+                "geometry_scaling_factor_IL6": 1.0
             }
         }
     },
@@ -111,7 +117,7 @@
         },
         "pas": {
             "PARAMETER": {
-                "g_pas (S/cm2)": 1e-4,
+                "g_pas (S/cm2)": 0.0001,
                 "e_pas (mV)": -85.0
             }
         },
@@ -123,7 +129,7 @@
                 "lps_stim_IL6": 0,
                 "lps_sensitivity_IL6": 0.12,
                 "lps_threshold_IL6": 0.5,
-                "ca_threshold_IL6": 0.00005,
+                "ca_threshold_IL6": 5e-05,
                 "ca_sensitivity_IL6": 2.3,
                 "basal_production_IL6": 0.03,
                 "max_production_IL6": 12.0,
@@ -151,7 +157,10 @@
                 "g_il6_IL6": 0.0001,
                 "pca_IL6": 1.0,
                 "pna_IL6": 0.1,
-                "pk_IL6": 0.08
+                "pk_IL6": 0.08,
+                "geometry_scale_mode_IL6": 1,
+                "reference_diameter_IL6": 1.0,
+                "geometry_scaling_factor_IL6": 1.0
             }
         }
     },
@@ -175,7 +184,7 @@
                 "lps_stim_IL6": 0,
                 "lps_sensitivity_IL6": 0.15,
                 "lps_threshold_IL6": 0.3,
-                "ca_threshold_IL6": 0.00003,
+                "ca_threshold_IL6": 3e-05,
                 "ca_sensitivity_IL6": 2.5,
                 "basal_production_IL6": 0.05,
                 "max_production_IL6": 18.0,
@@ -203,7 +212,10 @@
                 "g_il6_IL6": 0.00012,
                 "pca_IL6": 1.0,
                 "pna_IL6": 0.1,
-                "pk_IL6": 0.08
+                "pk_IL6": 0.08,
+                "geometry_scale_mode_IL6": 1,
+                "reference_diameter_IL6": 1.0,
+                "geometry_scaling_factor_IL6": 1.0
             }
         }
     }

@@ -7,7 +7,7 @@
         },
         "pas": {
             "PARAMETER": {
-                "g_pas (S/cm2)": 1e-4,
+                "g_pas (S/cm2)": 0.0001,
                 "e_pas (mV)": -70.0
             }
         },
@@ -16,14 +16,17 @@
         "ca_ion": {},
         "Piezo1": {
             "PARAMETER": {
-                "density_Piezo1": 1e8,
+                "density_Piezo1": 150000000.0,
                 "mforce_Piezo1": 0,
-                "force_sensitivity_Piezo1": 0.05,
-                "force_threshold_Piezo1": 0.5,
-                "g_single_Piezo1": 27e-12,
+                "force_sensitivity_Piezo1": 0.08,
+                "force_threshold_Piezo1": 0.3,
+                "g_single_Piezo1": 3e-11,
                 "pca_Piezo1": 1.0,
-                "pna_Piezo1": 0.1,
-                "pk_Piezo1": 0.08
+                "pna_Piezo1": 0.12,
+                "pk_Piezo1": 0.09,
+                "density_scale_mode_Piezo1": 1,
+                "density_scale_factor_Piezo1": 1.0,
+                "ca_modulation_strength_Piezo1": 0.0
             }
         }
     },
@@ -35,7 +38,7 @@
         },
         "pas": {
             "PARAMETER": {
-                "g_pas (S/cm2)": 1e-4,
+                "g_pas (S/cm2)": 0.0001,
                 "e_pas (mV)": -70.0
             }
         },
@@ -44,14 +47,17 @@
         "ca_ion": {},
         "Piezo1": {
             "PARAMETER": {
-                "density_Piezo1": 5e7,
+                "density_Piezo1": 80000000.0,
                 "mforce_Piezo1": 0,
-                "force_sensitivity_Piezo1": 0.05,
-                "force_threshold_Piezo1": 0.5,
-                "g_single_Piezo1": 27e-12,
+                "force_sensitivity_Piezo1": 0.08,
+                "force_threshold_Piezo1": 0.3,
+                "g_single_Piezo1": 3e-11,
                 "pca_Piezo1": 1.0,
-                "pna_Piezo1": 0.1,
-                "pk_Piezo1": 0.08
+                "pna_Piezo1": 0.12,
+                "pk_Piezo1": 0.09,
+                "density_scale_mode_Piezo1": 1,
+                "density_scale_factor_Piezo1": 1.0,
+                "ca_modulation_strength_Piezo1": 0.0
             }
         }
     },
@@ -63,7 +69,7 @@
         },
         "pas": {
             "PARAMETER": {
-                "g_pas (S/cm2)": 1e-4,
+                "g_pas (S/cm2)": 0.0001,
                 "e_pas (mV)": -85.0
             }
         },
@@ -72,14 +78,17 @@
         "ca_ion": {},
         "Piezo1": {
             "PARAMETER": {
-                "density_Piezo1": 1e7,
+                "density_Piezo1": 15000000.0,
                 "mforce_Piezo1": 0,
-                "force_sensitivity_Piezo1": 0.04,
-                "force_threshold_Piezo1": 0.8,
-                "g_single_Piezo1": 27e-12,
+                "force_sensitivity_Piezo1": 0.07,
+                "force_threshold_Piezo1": 0.5,
+                "g_single_Piezo1": 3e-11,
                 "pca_Piezo1": 1.0,
-                "pna_Piezo1": 0.1,
-                "pk_Piezo1": 0.08
+                "pna_Piezo1": 0.12,
+                "pk_Piezo1": 0.09,
+                "density_scale_mode_Piezo1": 1,
+                "density_scale_factor_Piezo1": 1.0,
+                "ca_modulation_strength_Piezo1": 0.0
             }
         }
     },
@@ -100,14 +109,17 @@
         "ca_ion": {},
         "Piezo1": {
             "PARAMETER": {
-                "density_Piezo1": 2e8,
+                "density_Piezo1": 250000000.0,
                 "mforce_Piezo1": 0,
-                "force_sensitivity_Piezo1": 0.06,
-                "force_threshold_Piezo1": 0.4,
-                "g_single_Piezo1": 27e-12,
+                "force_sensitivity_Piezo1": 0.09,
+                "force_threshold_Piezo1": 0.25,
+                "g_single_Piezo1": 3e-11,
                 "pca_Piezo1": 1.0,
-                "pna_Piezo1": 0.1,
-                "pk_Piezo1": 0.08
+                "pna_Piezo1": 0.12,
+                "pk_Piezo1": 0.09,
+                "density_scale_mode_Piezo1": 1,
+                "density_scale_factor_Piezo1": 1.0,
+                "ca_modulation_strength_Piezo1": 0.0
             }
         }
     }
