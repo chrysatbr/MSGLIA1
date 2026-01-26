@@ -24,6 +24,26 @@ References:
 5. Locksley RM et al., Cell 2001 - TNF and TNFR superfamily structure-function
 6. Held F et al., J Pharmacokinet Pharmacodyn 2019 - Challenge model of TNFalpha turnover
 
+
+GEOMETRY-AWARE VERSION:
+This version includes morphology-dependent cytokine production.
+
+KEY ADDITIONS:
+1. Production scales with segment diameter (surface area or volume)
+2. Added geometry_scale_mode parameter (0=off, 1=surface, 2=volume, 3=hybrid)
+3. Added reference_diameter for normalization
+4. Production rates now: base_rate * geometry_scaling * other_factors
+
+PHYSIOLOGICAL RATIONALE:
+- Larger segments have more surface area ? more receptors ? more production
+- Larger segments have more volume ? more ribosomes ? more translation
+- Cytokine release scales with cell size
+
+Based on:
+- Hanisch & Kettenmann (2007) Brain Res Rev
+- Lively & Schlichter (2013) J Neuroinflammation
+- Boche et al. (2013) Acta Neuropathol
+
 ENDCOMMENT
 
 
@@ -46,7 +66,10 @@ NEURON {
     RANGE nfkb_activation_threshold, nfkb_decay_rate, nfkb_activation_rate
     RANGE translation_delay_factor, secretion_rate
     RANGE g_tnf, itnf, pca, pna, pk
-    NONSPECIFIC_CURRENT itnf
+        
+    : GEOMETRY-AWARE PARAMETERS
+    RANGE geometry_scale_mode, reference_diameter, geometry_scaling_factor
+        NONSPECIFIC_CURRENT itnf
 }
 
 UNITS {
@@ -60,7 +83,14 @@ UNITS {
     R = (k-mole) (joule/degC)
 }
 
-PARAMETER {	
+PARAMETER {	    
+    : ================================================================
+    : GEOMETRY-AWARE PARAMETERS
+    : ================================================================
+    geometry_scale_mode = 1         : 0=no scaling, 1=surface area, 2=volume, 3=hybrid
+    reference_diameter = 1.0 (um)   : Reference diameter for normalization
+    geometry_scaling_factor = 1.0   : Overall scaling strength
+    
     : LPS stimulation parameters
     lps_stim = 0                    : LPS concentration (dimensionless, represents ng/ml)
     lps_sensitivity = 0.1           : LPS sensitivity parameter
@@ -121,6 +151,7 @@ PARAMETER {
 
 ASSIGNED {
     v (mV)
+    diam (um)                       : Segment diameter (AUTOMATIC from NEURON)
     celsius (degC)
     cai (mM)                        : Intracellular calcium concentration
     cao (mM)
@@ -148,10 +179,13 @@ ASSIGNED {
     tnfr1_free                      : Free TNFR1 receptors
     tnfr2_free                      : Free TNFR2 receptors
     receptor_activation             : Combined receptor activation signal
+    
+    : NEW: Geometry scaling
+    geometry_scaling                : Calculated geometry-dependent scaling factor
 }
 
 STATE {
-    tnf_conc                        : TNFa concentration (pg/ml)
+    tnf_conc                        : TNFa concentration (integrated)
     tnf_mrna                        : TNFalpha mRNA level (arbitrary units)
     il10_conc                       : IL-10 concentration (pg/ml)
     tgfb_conc                       : TGFbeta concentration (pg/ml)
@@ -171,10 +205,18 @@ INITIAL {
     
     tnf_production_rate = basal_production
     tnf_decay_rate = 0
+    
+    : Calculate initial geometry scaling
+    geometry_scaling = calculate_geometry_scaling(diam, geometry_scale_mode, 
+                                                   reference_diameter, geometry_scaling_factor)
 }
 
 BREAKPOINT {
-    SOLVE dynamics METHOD derivimplicit
+    SOLVE dynamics METHOD derivimplicit    
+    : Update geometry scaling (in case diameter changes dynamically)
+    geometry_scaling = calculate_geometry_scaling(diam, geometry_scale_mode, 
+                                                   reference_diameter, geometry_scaling_factor)
+
     
     : Calculate TNFa-induced conductance
     g_total = g_tnf * tnf_conc
@@ -188,8 +230,16 @@ BREAKPOINT {
 }
 
 DERIVATIVE dynamics {
-    LOCAL nfkb_stimulus
+    LOCAL nfkb_stimulus, scaled_basal_production, scaled_max_production
+    
     : ================================================================
+    : GEOMETRY-AWARE SCALING
+    : Scale production rates by geometry
+    : ================================================================
+    
+    scaled_basal_production = basal_production * geometry_scaling
+    scaled_max_production = max_production * geometry_scaling
+        : ================================================================
     : 1. LPS ACTIVATION FACTOR
     : ================================================================
     if (lps_stim > lps_threshold) {
@@ -247,7 +297,7 @@ DERIVATIVE dynamics {
     : ================================================================
     : 6. mRNA DYNAMICS (with NFkB-dependent transcription)
     : ================================================================
-    tnf_mrna' = (basal_production + max_production * lps_factor * ca_factor * (1 + nfkb_active)) * 
+    tnf_mrna' = (scaled_basal_production + scaled_max_production * lps_factor * ca_factor * (1 + nfkb_active)) * 
                  autocrine_factor * total_inhibition / tau_production - tnf_mrna / tau_mrna
     
     : Non-negative constraint handled by initial conditions
@@ -304,6 +354,50 @@ DERIVATIVE dynamics {
     : Basal level maintained by initial conditions
 }
 
+
+: ====================================================================
+: GEOMETRY SCALING FUNCTION
+: ====================================================================
+FUNCTION calculate_geometry_scaling(diameter, scale_mode, ref_diam, scale_factor) (1) {
+    LOCAL surface_ratio, volume_ratio, scaling
+    
+    : Mode 0: No scaling (backward compatible)
+    if (scale_mode == 0) {
+        calculate_geometry_scaling = 1.0
+        
+    : Mode 1: Surface area scaling
+    : Surface area of cylinder = pi * d * L
+    : For constant L, surface proportional to d
+    } else if (scale_mode == 1) {
+        surface_ratio = diameter / ref_diam
+        scaling = surface_ratio * scale_factor
+        calculate_geometry_scaling = scaling
+        
+    : Mode 2: Volume scaling
+    : Volume of cylinder = pi * (d/2)^2 * L
+    : For constant L, volume proportional to d^2
+    } else if (scale_mode == 2) {
+        volume_ratio = (diameter / ref_diam) * (diameter / ref_diam)
+        scaling = volume_ratio * scale_factor
+        calculate_geometry_scaling = scaling
+        
+    : Mode 3: Hybrid (surface + volume) / 2
+    } else if (scale_mode == 3) {
+        surface_ratio = diameter / ref_diam
+        volume_ratio = (diameter / ref_diam) * (diameter / ref_diam)
+        scaling = (surface_ratio + volume_ratio) / 2.0 * scale_factor
+        calculate_geometry_scaling = scaling
+        
+    : Default: No scaling
+    } else {
+        calculate_geometry_scaling = 1.0
+    }
+    
+    : Ensure non-negative
+    if (calculate_geometry_scaling < 0) {
+        calculate_geometry_scaling = 0
+    }
+}
 FUNCTION ghk(v, ci, co, z) {
     LOCAL arg, fac
     fac = z * v / (R * (celsius + 273.15)) * F

@@ -31,6 +31,26 @@ References:
 4. Hanisch UK, Glia 2002 - LPS-induced microglial activation
 5. Schroder K, Tschopp J, Cell 2010 - The inflammasomes (NLRP3)
 
+
+GEOMETRY-AWARE VERSION:
+This version includes morphology-dependent cytokine production.
+
+KEY ADDITIONS:
+1. Production scales with segment diameter (surface area or volume)
+2. Added geometry_scale_mode parameter (0=off, 1=surface, 2=volume, 3=hybrid)
+3. Added reference_diameter for normalization
+4. Production rates now: base_rate * geometry_scaling * other_factors
+
+PHYSIOLOGICAL RATIONALE:
+- Larger segments have more surface area ? more receptors ? more production
+- Larger segments have more volume ? more ribosomes ? more translation
+- Cytokine release scales with cell size
+
+Based on:
+- Hanisch & Kettenmann (2007) Brain Res Rev
+- Lively & Schlichter (2013) J Neuroinflammation
+- Boche et al. (2013) Acta Neuropathol
+
 ENDCOMMENT
 
 
@@ -59,7 +79,10 @@ NEURON {
     RANGE caspase1_activity, processing_rate
     RANGE translation_delay_factor, secretion_rate
     RANGE g_il1b, iil1b, pca, pna, pk
-    NONSPECIFIC_CURRENT iil1b
+        
+    : GEOMETRY-AWARE PARAMETERS
+    RANGE geometry_scale_mode, reference_diameter, geometry_scaling_factor
+        NONSPECIFIC_CURRENT iil1b
 }
 
 UNITS {
@@ -73,7 +96,14 @@ UNITS {
     R = (k-mole) (joule/degC)
 }
 
-PARAMETER {	
+PARAMETER {	    
+    : ================================================================
+    : GEOMETRY-AWARE PARAMETERS
+    : ================================================================
+    geometry_scale_mode = 1         : 0=no scaling, 1=surface area, 2=volume, 3=hybrid
+    reference_diameter = 1.0 (um)   : Reference diameter for normalization
+    geometry_scaling_factor = 1.0   : Overall scaling strength
+    
     : LPS stimulation parameters
     lps_stim = 0                    : LPS concentration (dimensionless, represents ng/ml)
     lps_sensitivity = 0.12          : LPS sensitivity parameter (slightly higher than TNFalpha)
@@ -149,6 +179,7 @@ PARAMETER {
 
 ASSIGNED {
     v (mV)
+    diam (um)                       : Segment diameter (AUTOMATIC from NEURON)
     celsius (degC)
     cai (mM)                        : Intracellular calcium concentration
     cao (mM)
@@ -163,6 +194,7 @@ ASSIGNED {
     iil1b (mA/cm2)
     
     il1b_production_rate            : Current IL-1beta production rate
+    il1b_conc                       : Total IL1B concentration (calculated)
     il1b_decay_rate                 : Current IL-1beta decay rate
     lps_factor                      : LPS activation factor
     ca_factor                       : Calcium activation factor
@@ -178,11 +210,13 @@ ASSIGNED {
     il1r2_free                      : Free IL-1R2 receptors (decoy)
     receptor_activation             : Net receptor activation signal
     inflammasome_stimulus           : Stimulus for inflammasome activation
+    
+    : NEW: Geometry scaling
+    geometry_scaling                : Calculated geometry-dependent scaling factor
 }
 
 STATE {
-    il1b_conc                       : Total IL-1beta concentration (pg/ml)
-    il1b_pro                        : Pro-IL-1beta concentration (immature form)
+        il1b_pro                        : Pro-IL-1beta concentration (immature form)
     il1b_mature                     : Mature IL-1beta concentration (processed form)
     il1b_mrna                       : IL-1beta mRNA level (arbitrary units)
     il10_conc                       : IL-10 concentration (pg/ml)
@@ -209,10 +243,23 @@ INITIAL {
     
     il1b_production_rate = basal_production
     il1b_decay_rate = 0
+    
+    : Calculate initial geometry scaling
+    : Safety check: if diam is 0 or undefined, use reference_diameter
+    if (diam > 0) {
+        geometry_scaling = calculate_geometry_scaling(diam, geometry_scale_mode, 
+                                                       reference_diameter, geometry_scaling_factor)
+    } else {
+        geometry_scaling = 1.0
+    }
 }
 
 BREAKPOINT {
-    SOLVE dynamics METHOD derivimplicit
+    SOLVE dynamics METHOD derivimplicit    
+    : Update geometry scaling (in case diameter changes dynamically)
+    geometry_scaling = calculate_geometry_scaling(diam, geometry_scale_mode, 
+                                                   reference_diameter, geometry_scaling_factor)
+
     
     : Calculate IL-1beta-induced conductance (based on mature IL-1beta)
     g_total = g_il1b * il1b_mature
@@ -226,7 +273,15 @@ BREAKPOINT {
 }
 
 DERIVATIVE dynamics {
-    LOCAL nfkb_stimulus, processing_flux
+    LOCAL nfkb_stimulus, processing_flux, scaled_basal_production, scaled_max_production
+    
+    : ================================================================
+    : GEOMETRY-AWARE SCALING
+    : Scale production rates by geometry
+    : ================================================================
+    scaled_basal_production = basal_production * geometry_scaling
+    scaled_max_production = max_production * geometry_scaling
+    
     : ================================================================
     : 1. LPS ACTIVATION FACTOR
     : ================================================================
@@ -309,7 +364,7 @@ DERIVATIVE dynamics {
     : 8. mRNA DYNAMICS (with NFkappaB-dependent transcription)
     : Enhanced by TNFalpha activation
     : ================================================================
-    il1b_mrna' = (basal_production + max_production * (lps_factor + tnfa_factor) * ca_factor * 
+    il1b_mrna' = (scaled_basal_production + scaled_max_production * (lps_factor + tnfa_factor) * ca_factor * 
                   (1 + nfkb_active)) * autocrine_factor * total_inhibition / tau_production - 
                   il1b_mrna / tau_mrna
     
@@ -357,7 +412,7 @@ DERIVATIVE dynamics {
     : ================================================================
     : 12. TOTAL IL-1beta CONCENTRATION
     : ================================================================
-    il1b_conc = il1b_pro + il1b_mature
+    il1b_conc = il1b_pro + il1b_mature  
     
     : Production and decay rates for monitoring
     il1b_production_rate = processing_flux
@@ -384,6 +439,58 @@ DERIVATIVE dynamics {
     tnfa_conc' = 0.4 * il1b_mature / tau_tnfa - tnfa_decay * tnfa_conc
 }
 
+
+: ====================================================================
+: GEOMETRY SCALING FUNCTION
+: ====================================================================
+FUNCTION calculate_geometry_scaling(diameter, scale_mode, ref_diam, scale_factor) (1) {
+    LOCAL surface_ratio, volume_ratio, scaling
+    
+    : Safety checks
+    if (ref_diam <= 0) {
+        ref_diam = 1.0  : Default reference
+    }
+    if (diameter <= 0) {
+        diameter = ref_diam  : Use reference if invalid
+    }
+    
+    : Mode 0: No scaling (backward compatible)
+    if (scale_mode == 0) {
+        calculate_geometry_scaling = 1.0
+        
+    : Mode 1: Surface area scaling
+    : Surface area of cylinder = pi * d * L
+    : For constant L, surface proportional to d
+    } else if (scale_mode == 1) {
+        surface_ratio = diameter / ref_diam
+        scaling = surface_ratio * scale_factor
+        calculate_geometry_scaling = scaling
+        
+    : Mode 2: Volume scaling
+    : Volume of cylinder = pi * (d/2)^2 * L
+    : For constant L, volume proportional to d^2
+    } else if (scale_mode == 2) {
+        volume_ratio = (diameter / ref_diam) * (diameter / ref_diam)
+        scaling = volume_ratio * scale_factor
+        calculate_geometry_scaling = scaling
+        
+    : Mode 3: Hybrid (surface + volume) / 2
+    } else if (scale_mode == 3) {
+        surface_ratio = diameter / ref_diam
+        volume_ratio = (diameter / ref_diam) * (diameter / ref_diam)
+        scaling = (surface_ratio + volume_ratio) / 2.0 * scale_factor
+        calculate_geometry_scaling = scaling
+        
+    : Default: No scaling
+    } else {
+        calculate_geometry_scaling = 1.0
+    }
+    
+    : Ensure non-negative
+    if (calculate_geometry_scaling < 0) {
+        calculate_geometry_scaling = 0
+    }
+}
 FUNCTION ghk(v, ci, co, z) {
     LOCAL arg, fac
     fac = z * v / (R * (celsius + 273.15)) * F

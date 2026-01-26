@@ -25,6 +25,26 @@ References:
 5. Heinrich PC et al., Biochem J 2003 - Principles of IL-6-type cytokine signaling
 6. Rose-John S, Nat Rev Immunol 2018 - IL-6 trans-signaling via soluble IL-6R
 
+
+GEOMETRY-AWARE VERSION:
+This version includes morphology-dependent cytokine production.
+
+KEY ADDITIONS:
+1. Production scales with segment diameter (surface area or volume)
+2. Added geometry_scale_mode parameter (0=off, 1=surface, 2=volume, 3=hybrid)
+3. Added reference_diameter for normalization
+4. Production rates now: base_rate * geometry_scaling * other_factors
+
+PHYSIOLOGICAL RATIONALE:
+- Larger segments have more surface area ? more receptors ? more production
+- Larger segments have more volume ? more ribosomes ? more translation
+- Cytokine release scales with cell size
+
+Based on:
+- Hanisch & Kettenmann (2007) Brain Res Rev
+- Lively & Schlichter (2013) J Neuroinflammation
+- Boche et al. (2013) Acta Neuropathol
+
 ENDCOMMENT
 
 
@@ -47,7 +67,10 @@ NEURON {
     RANGE stat3_activation_threshold, stat3_decay_rate, stat3_activation_rate
     RANGE translation_delay_factor, secretion_rate
     RANGE g_il6, iil6, pca, pna, pk
-    NONSPECIFIC_CURRENT iil6
+        
+    : GEOMETRY-AWARE PARAMETERS
+    RANGE geometry_scale_mode, reference_diameter, geometry_scaling_factor
+        NONSPECIFIC_CURRENT iil6
 }
 
 UNITS {
@@ -61,7 +84,14 @@ UNITS {
     R = (k-mole) (joule/degC)
 }
 
-PARAMETER {	
+PARAMETER {	    
+    : ================================================================
+    : GEOMETRY-AWARE PARAMETERS
+    : ================================================================
+    geometry_scale_mode = 1         : 0=no scaling, 1=surface area, 2=volume, 3=hybrid
+    reference_diameter = 1.0 (um)   : Reference diameter for normalization
+    geometry_scaling_factor = 1.0   : Overall scaling strength
+    
     : LPS stimulation parameters
     lps_stim = 0                    : LPS concentration (dimensionless, represents ng/ml)
     lps_sensitivity = 0.1           : LPS sensitivity parameter
@@ -121,6 +151,7 @@ PARAMETER {
 
 ASSIGNED {
     v (mV)
+    diam (um)                       : Segment diameter (AUTOMATIC from NEURON)
     celsius (degC)
     cai (mM)                        : Intracellular calcium concentration
     cao (mM)
@@ -146,10 +177,13 @@ ASSIGNED {
     il6r_free                       : Free IL-6R receptors
     gp130_free                      : Free gp130 receptors
     receptor_complex                : IL-6:IL-6R:gp130 signaling complex
+    
+    : NEW: Geometry scaling
+    geometry_scaling                : Calculated geometry-dependent scaling factor
 }
 
 STATE {
-    il6_conc                        : IL-6 concentration (pg/ml)
+    il6_conc                        : IL-6 concentration (integrated)
     il6_mrna                        : IL-6 mRNA level (arbitrary units)
     il10_conc                       : IL-10 concentration (pg/ml)
     il6r_bound                      : Bound IL-6R receptors (fraction)
@@ -167,10 +201,18 @@ INITIAL {
     
     il6_production_rate = basal_production
     il6_decay_rate = 0
+    
+    : Calculate initial geometry scaling
+    geometry_scaling = calculate_geometry_scaling(diam, geometry_scale_mode, 
+                                                   reference_diameter, geometry_scaling_factor)
 }
 
 BREAKPOINT {
-    SOLVE dynamics METHOD derivimplicit
+    SOLVE dynamics METHOD derivimplicit    
+    : Update geometry scaling (in case diameter changes dynamically)
+    geometry_scaling = calculate_geometry_scaling(diam, geometry_scale_mode, 
+                                                   reference_diameter, geometry_scaling_factor)
+
     
     : Calculate IL-6-induced conductance
     g_total = g_il6 * il6_conc
@@ -184,8 +226,16 @@ BREAKPOINT {
 }
 
 DERIVATIVE dynamics {
-    LOCAL stat3_stimulus
+    LOCAL stat3_stimulus, scaled_basal_production, scaled_max_production
+    
     : ================================================================
+    : GEOMETRY-AWARE SCALING
+    : Scale production rates by geometry
+    : ================================================================
+    
+    scaled_basal_production = basal_production * geometry_scaling
+    scaled_max_production = max_production * geometry_scaling
+        : ================================================================
     : 1. LPS ACTIVATION FACTOR
     : ================================================================
     if (lps_stim > lps_threshold) {
@@ -235,7 +285,7 @@ DERIVATIVE dynamics {
     : ================================================================
     : 6. mRNA DYNAMICS (with STAT3-dependent transcription)
     : ================================================================
-    il6_mrna' = (basal_production + max_production * lps_factor * ca_factor * 
+    il6_mrna' = (scaled_basal_production + scaled_max_production * lps_factor * ca_factor * 
                  (1 + stat3_active + cross_cytokine_activation)) * 
                  autocrine_factor / tau_production - il6_mrna / tau_mrna
     
@@ -285,6 +335,50 @@ DERIVATIVE dynamics {
     : Basal level maintained by initial conditions
 }
 
+
+: ====================================================================
+: GEOMETRY SCALING FUNCTION
+: ====================================================================
+FUNCTION calculate_geometry_scaling(diameter, scale_mode, ref_diam, scale_factor) (1) {
+    LOCAL surface_ratio, volume_ratio, scaling
+    
+    : Mode 0: No scaling (backward compatible)
+    if (scale_mode == 0) {
+        calculate_geometry_scaling = 1.0
+        
+    : Mode 1: Surface area scaling
+    : Surface area of cylinder = pi * d * L
+    : For constant L, surface proportional to d
+    } else if (scale_mode == 1) {
+        surface_ratio = diameter / ref_diam
+        scaling = surface_ratio * scale_factor
+        calculate_geometry_scaling = scaling
+        
+    : Mode 2: Volume scaling
+    : Volume of cylinder = pi * (d/2)^2 * L
+    : For constant L, volume proportional to d^2
+    } else if (scale_mode == 2) {
+        volume_ratio = (diameter / ref_diam) * (diameter / ref_diam)
+        scaling = volume_ratio * scale_factor
+        calculate_geometry_scaling = scaling
+        
+    : Mode 3: Hybrid (surface + volume) / 2
+    } else if (scale_mode == 3) {
+        surface_ratio = diameter / ref_diam
+        volume_ratio = (diameter / ref_diam) * (diameter / ref_diam)
+        scaling = (surface_ratio + volume_ratio) / 2.0 * scale_factor
+        calculate_geometry_scaling = scaling
+        
+    : Default: No scaling
+    } else {
+        calculate_geometry_scaling = 1.0
+    }
+    
+    : Ensure non-negative
+    if (calculate_geometry_scaling < 0) {
+        calculate_geometry_scaling = 0
+    }
+}
 FUNCTION ghk(v, ci, co, z) {
     LOCAL arg, fac
     fac = z * v / (R * (celsius + 273.15)) * F
