@@ -31,9 +31,16 @@ begintemplate SimPiezo1
     isAltRunControl = -1
     strdef outTxtFileRelPathName
     
-    // UI - Added graphPiezoCurrent
-    objref vBoxPiezoMain, vBoxGraphSEClamp, vBoxGraphForce, vBoxGraphPiezoCurrent, vBoxPlotShapeVoltage, vBoxPlotShapeForce, vBoxPlotShapeIPiezo
-    objref graphSEClamp, graphForce, graphPiezoCurrent, plotShapeVoltage, plotShapeForce, plotShapeIPiezo
+    // UI - Original + Enhanced plots
+    objref vBoxPiezoMain
+    objref vBoxGraphSEClamp, vBoxGraphForce, vBoxGraphPiezoCurrent
+    objref vBoxGraphIca, vBoxGraphIna, vBoxGraphIk, vBoxGraphPo, vBoxGraphDensity
+    objref vBoxPlotShapeVoltage, vBoxPlotShapeForce, vBoxPlotShapeIPiezo
+    objref vBoxPlotShapeIca, vBoxPlotShapeIna, vBoxPlotShapeIk, vBoxPlotShapeDensity
+    objref graphSEClamp, graphForce, graphPiezoCurrent
+    objref graphIca, graphIna, graphIk, graphPo, graphDensity
+    objref plotShapeVoltage, plotShapeForce, plotShapeIPiezo
+    objref plotShapeIca, plotShapeIna, plotShapeIk, plotShapeDensity
     
      
     // Statistics file
@@ -72,7 +79,7 @@ begintemplate SimPiezo1
         plotShapeForce.exec_menu("View = plot")
 
 	// Write data to file: time, Force, Piezo_current, Voltage
-        filePiezo1Results.printf("%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\n", t, dendrite_ref.o(0).sec.mforce_Piezo1(0.5), dendrite_ref.o(0).sec.ipiezo_Piezo1(0.5), dendrite_ref.o(0).sec.v(0.5))
+        filePiezo1Results.printf("%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\n", t, dendrite_ref.o(0).sec.mforce_Piezo1(0.5), dendrite_ref.o(0).sec.ipiezo_Piezo1(0.5), dendrite_ref.o(0).sec.v(0.5), dendrite_ref.o(0).sec.ica(0.5), dendrite_ref.o(0).sec.ina(0.5), dendrite_ref.o(0).sec.ik(0.5), dendrite_ref.o(0).sec.Po_Piezo1(0.5), dendrite_ref.o(0).sec.scaled_density_Piezo1(0.5))
 
     }
     
@@ -94,9 +101,18 @@ begintemplate SimPiezo1
         removeItemFromList(graphList[1], graphForce)
         removeItemFromList(graphList[1], graphSEClamp)
         removeItemFromList(graphList[1], graphPiezoCurrent)
+        removeItemFromList(graphList[1], graphIca)
+        removeItemFromList(graphList[1], graphIna)
+        removeItemFromList(graphList[1], graphIk)
+        removeItemFromList(graphList[1], graphPo)
+        removeItemFromList(graphList[1], graphDensity)
         removeItemFromList(fast_flush_list, plotShapeForce)
         removeItemFromList(fast_flush_list, plotShapeVoltage)
         removeItemFromList(fast_flush_list, plotShapeIPiezo)
+        removeItemFromList(fast_flush_list, plotShapeIca)
+        removeItemFromList(fast_flush_list, plotShapeIna)
+        removeItemFromList(fast_flush_list, plotShapeIk)
+        removeItemFromList(fast_flush_list, plotShapeDensity)
         
         unmapIfNotNil(vBoxPiezoMain)
         unmapIfNotNil(vBoxGraphSEClamp)
@@ -105,6 +121,15 @@ begintemplate SimPiezo1
         unmapIfNotNil(vBoxPlotShapeVoltage)
         unmapIfNotNil(vBoxPlotShapeForce)
         unmapIfNotNil(vBoxPlotShapeIPiezo)
+        unmapIfNotNil(vBoxPlotShapeIca)
+        unmapIfNotNil(vBoxPlotShapeIna)
+        unmapIfNotNil(vBoxPlotShapeIk)
+        unmapIfNotNil(vBoxPlotShapeDensity)
+        unmapIfNotNil(vBoxGraphIca)
+        unmapIfNotNil(vBoxGraphIna)
+        unmapIfNotNil(vBoxGraphIk)
+        unmapIfNotNil(vBoxGraphPo)
+        unmapIfNotNil(vBoxGraphDensity)
         
         seClampHelper.removeClamp()
     }
@@ -125,6 +150,10 @@ begintemplate SimPiezo1
         Tau2 = 20             // Decay time of force application (faster kinetics)
         MaxForce = 5          // Maximum force in pN (reduced for physiological range)
         ForceSensitivity = 0.05 // Force sensitivity parameter (physiologically accurate)
+	density_global = 1e8
+    	density_scale_mode_global = 1
+    	force_threshold_global = 0.5      // Piezo1 threshold
+    	ca_modulation_global = 0.0
 
         forall {
             if (ismembrane("Piezo1")) {
@@ -161,9 +190,13 @@ begintemplate SimPiezo1
             xpvalue("Force sensitivity", &ForceSensitivity, 1)
             xpvalue("Tau rise (ms)", &Tau1, 1)
             xpvalue("Tau decay (ms)", &Tau2, 1)
+	   
+            xpvalue("Channel density (ch/cm2)", &density_global, 1, "updateChannelDensity()")
+            xpvalue("Geometry scaling mode (0-3)", &density_scale_mode_global, 1, "updateGeometryMode()")
+            xpvalue("Force threshold (pN)", &force_threshold_global, 1, "updateForceThreshold()")
+            xpvalue("Ca2+ modulation (0-1)", &ca_modulation_global, 1, "updateCaModulation()")
             xlabel("==================================================================")
             xpanel(625,164)
-            
             xpanel("")
             xlabel("================== Voltage clamp of soma==================")
             xpvalue("Somatic voltage clamp", &seClampHelper.seClamp.amp1, 1)
@@ -174,7 +207,7 @@ begintemplate SimPiezo1
             xpanel(328,129)
         }
         vBoxPiezoMain.intercept(0)
-        vBoxPiezoMain.map("Piezo1 settings", 195, 102, 300, 530)
+        vBoxPiezoMain.map("Piezo1 settings", 195, 102, 300, 680)
         
         vBoxGraphSEClamp = new VBox()
         vBoxGraphSEClamp.intercept(1)
@@ -272,9 +305,168 @@ begintemplate SimPiezo1
         }
         vBoxPlotShapeIPiezo.intercept(0)
         vBoxPlotShapeIPiezo.map("Piezo1 Current", 1745, 202, 400.64, 400.32)
+
+        
+        
+        // Ca2+ current shape plot
+        vBoxPlotShapeIca = new VBox()
+        vBoxPlotShapeIca.intercept(1)
+        {
+            plotShapeIca = new PlotShape(0)
+            fast_flush_list.append(plotShapeIca)
+            plotShapeIca.size(-50,50,-50,50)
+            plotShapeIca.view(-50, -49.9003, 100, 100, 10, 512, 380, 380)
+            plotShapeIca.exec_menu("Shape Plot")
+            plotShapeIca.variable("ica")
+            plotShapeIca.label(0.1, 0.99, "Ca2+ Current (pA)", 2, 1, 0, 1, 1)
+            plotShapeIca.show(0)
+            plotShapeIca.scale(-500, 0)
+            plotShapeIca.exec_menu("View = plot")
+        }
+        vBoxPlotShapeIca.intercept(0)
+        vBoxPlotShapeIca.map("Piezo1 Ca2+ Current Distribution", 490, 102, 380, 380)
+        
+        // Na+ current shape plot
+        vBoxPlotShapeIna = new VBox()
+        vBoxPlotShapeIna.intercept(1)
+        {
+            plotShapeIna = new PlotShape(0)
+            fast_flush_list.append(plotShapeIna)
+            plotShapeIna.size(-50,50,-50,50)
+            plotShapeIna.view(-50, -49.9003, 100, 100, 880, 102, 380, 380)
+            plotShapeIna.exec_menu("Shape Plot")
+            plotShapeIna.variable("ina")
+            plotShapeIna.label(0.1, 0.99, "Na+ Current (pA)", 2, 1, 0, 1, 1)
+            plotShapeIna.show(0)
+            plotShapeIna.scale(-100, 0)
+            plotShapeIna.exec_menu("View = plot")
+        }
+        vBoxPlotShapeIna.intercept(0)
+        vBoxPlotShapeIna.map("Piezo1 Na+ Current Distribution", 880, 102, 380, 380)
+        
+        // K+ current shape plot
+        vBoxPlotShapeIk = new VBox()
+        vBoxPlotShapeIk.intercept(1)
+        {
+            plotShapeIk = new PlotShape(0)
+            fast_flush_list.append(plotShapeIk)
+            plotShapeIk.size(-50,50,-50,50)
+            plotShapeIk.view(-50, -49.9003, 100, 100, 1270, 102, 380, 380)
+            plotShapeIk.exec_menu("Shape Plot")
+            plotShapeIk.variable("ik")
+            plotShapeIk.label(0.1, 0.99, "K+ Current (pA)", 2, 1, 0, 1, 1)
+            plotShapeIk.show(0)
+            plotShapeIk.scale(-80, 0)
+            plotShapeIk.exec_menu("View = plot")
+        }
+        vBoxPlotShapeIk.intercept(0)
+        vBoxPlotShapeIk.map("Piezo1 K+ Current Distribution", 1270, 102, 380, 380)
+        
+        // Scaled density shape plot
+        vBoxPlotShapeDensity = new VBox()
+        vBoxPlotShapeDensity.intercept(1)
+        {
+            plotShapeDensity = new PlotShape(0)
+            fast_flush_list.append(plotShapeDensity)
+            plotShapeDensity.size(-50,50,-50,50)
+            plotShapeDensity.view(-50, -49.9003, 100, 100, 1300, 102, 380, 380)
+            plotShapeDensity.exec_menu("Shape Plot")
+            plotShapeDensity.variable("scaled_density_Piezo1")
+            plotShapeDensity.label(0.1, 0.99, "Scaled Density (ch/cm2)", 2, 1, 0, 1, 1)
+            plotShapeDensity.show(0)
+            plotShapeDensity.scale(0, 2e9)
+            plotShapeDensity.exec_menu("View = plot")
+        }
+        vBoxPlotShapeDensity.intercept(0)
+        vBoxPlotShapeDensity.map("Piezo1 Channel Density", 1300, 102, 380, 380)
+        
+        // ================================================================
+        // NEW TIME PLOTS (GRAPHS)
+        // ================================================================
+        
+        // Ca2+ current vs time
+        vBoxGraphIca = new VBox()
+        vBoxGraphIca.intercept(1)
+        {
+            graphIca = new Graph(0)
+            fast_flush_list.append(graphIca)
+            graphIca.size(0, tstop, -500, 0)
+            graphIca.view(0, -500, tstop, 500, 45, 925, 400, 200)
+            graphIca.addvar("dendrite_ref.o(0).sec.ica( 0.5 )", 1, 1, 0.8, 0.9, 2)
+            graphList[0].append(graphIca)
+            graphIca.label(0.05, 0.95, "Time (ms)", 2, 1, 0, 1, 1)
+            graphIca.label("Ca2+ Current (pA)")
+        }
+        vBoxGraphIca.intercept(0)
+        vBoxGraphIca.map("Piezo1 Ca2+ Current vs Time", 45, 925, 400, 200)
+        
+        // Na+ current vs time
+        vBoxGraphIna = new VBox()
+        vBoxGraphIna.intercept(1)
+        {
+            graphIna = new Graph(0)
+            fast_flush_list.append(graphIna)
+            graphIna.size(0, tstop, -100, 0)
+            graphIna.view(0, -100, tstop, 100, 455, 925, 400, 200)
+            graphIna.addvar("dendrite_ref.o(0).sec.ina( 0.5 )", 2, 1, 0.8, 0.9, 2)
+            graphList[0].append(graphIna)
+            graphIna.label(0.05, 0.95, "Time (ms)", 2, 1, 0, 1, 1)
+            graphIna.label("Na+ Current (pA)")
+        }
+        vBoxGraphIna.intercept(0)
+        vBoxGraphIna.map("Piezo1 Na+ Current vs Time", 455, 925, 400, 200)
+        
+        // K+ current vs time
+        vBoxGraphIk = new VBox()
+        vBoxGraphIk.intercept(1)
+        {
+            graphIk = new Graph(0)
+            fast_flush_list.append(graphIk)
+            graphIk.size(0, tstop, -80, 0)
+            graphIk.view(0, -80, tstop, 80, 865, 925, 400, 200)
+            graphIk.addvar("dendrite_ref.o(0).sec.ik( 0.5 )", 3, 1, 0.8, 0.9, 2)
+            graphList[0].append(graphIk)
+            graphIk.label(0.05, 0.95, "Time (ms)", 2, 1, 0, 1, 1)
+            graphIk.label("K+ Current (pA)")
+        }
+        vBoxGraphIk.intercept(0)
+        vBoxGraphIk.map("Piezo1 K+ Current vs Time", 865, 925, 400, 200)
+        
+        // Open probability vs time
+        vBoxGraphPo = new VBox()
+        vBoxGraphPo.intercept(1)
+        {
+            graphPo = new Graph(0)
+            fast_flush_list.append(graphPo)
+            graphPo.size(0, tstop, 0, 1)
+            graphPo.view(0, 0, tstop, 1, 1275, 925, 400, 200)
+            graphPo.addvar("dendrite_ref.o(0).sec.Po_Piezo1( 0.5 )", 4, 1, 0.8, 0.9, 2)
+            graphList[0].append(graphPo)
+            graphPo.label(0.05, 0.95, "Time (ms)", 2, 1, 0, 1, 1)
+            graphPo.label("Open Probability")
+        }
+        vBoxGraphPo.intercept(0)
+        vBoxGraphPo.map("Piezo1 Open Probability vs Time", 1275, 925, 400, 200)
+        
+        // Scaled density vs time (should be constant)
+        vBoxGraphDensity = new VBox()
+        vBoxGraphDensity.intercept(1)
+        {
+            graphDensity = new Graph(0)
+            fast_flush_list.append(graphDensity)
+            graphDensity.size(0, tstop, 0, 2e9)
+            graphDensity.view(0, 0, tstop, 2e9, 1300, 925, 400, 200)
+            graphDensity.addvar("dendrite_ref.o(0).sec.scaled_density_Piezo1( 0.5 )", 5, 1, 0.8, 0.9, 2)
+            graphList[0].append(graphDensity)
+            graphDensity.label(0.05, 0.95, "Time (ms)", 2, 1, 0, 1, 1)
+            graphDensity.label("Scaled Density (ch/cm2)")
+        }
+        vBoxGraphDensity.intercept(0)
+        vBoxGraphDensity.map("Piezo1 Channel Density vs Time", 1300, 925, 400, 200)
     }
     
-endtemplate SimPiezo1
+
+ endtemplate SimPiezo1
 
 
 // Updates Piezo1 force stimulation on the cell.
@@ -288,30 +480,22 @@ endtemplate SimPiezo1
 // $8 - Force sensitivity
 // $9 - Time decay
 // $10 - Z coordinate circle center
-proc Piezo1Iteration() { local tau1, tau2, BaselineForce, dist_sq1, dist_sq2, z_diff, force_profile
+proc Piezo1Iteration() { local tau1, tau2, BaselineForce, force_profile
     tau1 = $5
     tau2 = $9
     BaselineForce = 0
     
     forall {
-        // Check if the section has the Piezo1 mechanism before trying to access its variables
         if (ismembrane("Piezo1")) {
-            // Calculate distances for both stimulation sites
-            dist_sq1 = dist2D_PtToPt_squared($1, $2, x3d(1), y3d(1))
-            dist_sq2 = dist2D_PtToPt_squared($1+$7, $2, x3d(1), y3d(1))
-            z_diff = abs($10-z3d(1))
-            
-            // Check if point is within stimulation area and time condition is met
-            if (((dist_sq1 < $3^2) || (dist_sq2 < $3^2)) && (z_diff < 10) && (t > $4)) {
+            // ΑΓΝΟΗΣΕ το distance check - εφάρμοσε force ΠΑΝΤΟΥ
+            if (t > $4) {
                 // Apply force with double exponential profile
                 if (tau2 != tau1) {
                     force_profile = BaselineForce + $6*(tau2/(tau2-tau1)*(-exp(-(t-$4)/tau1) + exp(-(t-$4)/tau2)))
                 } else {
-                    // Handle case where tau1 = tau2 to avoid division by zero
                     force_profile = BaselineForce + $6*((t-$4)/tau1)*exp(-(t-$4)/tau1)
                 }
                 
-                // Apply force threshold - only set force if above threshold
                 if (force_profile > force_threshold_Piezo1) {
                     mforce_Piezo1 = force_profile
                 } else {
@@ -321,7 +505,6 @@ proc Piezo1Iteration() { local tau1, tau2, BaselineForce, dist_sq1, dist_sq2, z_
                 mforce_Piezo1 = BaselineForce
             }
             
-            // Update force sensitivity
             force_sensitivity_Piezo1 = $8
         }
     }

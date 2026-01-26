@@ -1,3 +1,23 @@
+// ==============================================================================
+// SimTRPV4_Microglia.hoc
+// ==============================================================================
+// TRPV4 Channel Simulation for Different Microglia Morphologies
+// 
+// TIME SCALING: 1 ms simulation = 1 minute real time
+// Running 2500 ms = ~42 hours of real time
+//
+// Microglia types modeled:
+// 1. Ramified - Homeostatic/surveillance state
+// 2. Amoeboid - Activated/phagocytic state  
+// 3. Rod - Elongated/polarized state
+// 4. Dystrophic - Senescent/aged state
+// 5. DAM - Disease-Associated Microglia
+//
+// References:
+// - Redmon et al. 2021 (PMC8989051) - TRPV4 mechanoresponse in retinal microglia
+// - Nishimoto et al. 2021 (PNAS) - Temperature-dependent microglia movement
+// - Kumar et al. 2023 (JCI) - TRPV4 neuroimmune axis
+// ==============================================================================
 
 proc TRPV4Iteration() { }
 
@@ -10,11 +30,17 @@ func dist2D_PtToPt_squared() {
     return ($1-$3)*($1-$3) + ($2-$4)*($2-$4)
 }
 
+// 3D distance calculation
+func dist3D_PtToPt_squared() {
+    return ($1-$4)*($1-$4) + ($2-$5)*($2-$5) + ($3-$6)*($3-$6)
+}
+
 begintemplate SimTRPV4
     
     public preShowCheck, show, preRun, preContinue, advance, postRun, simDismissHandler
     public biophysJsonFileNameOrEmpty, isCustomProcAdvance, isAltRunControl
     
+    // Stimulation parameters
     public PX, PY, PZ, R_STIM, TimeBegin, MaxTNFa, PX2, Tau1, Tau2
     public AgonistConc, AntagonistConc, ShearStress
     
@@ -30,14 +56,18 @@ begintemplate SimTRPV4
     isCustomProcAdvance = -1
     isAltRunControl = -1
     strdef outTxtFileRelPathName
-
-	
-    objref vBoxTRPV4Main, vBoxGraphSEClamp, vBoxGraphTNFa, vBoxGraphExpression
-    objref vBoxGraphCldn5, vBoxGraphVECad, vBoxGraphICAM1, vBoxGraphNFkB
-    objref vBoxPlotShapeVoltage, vBoxPlotShapeTNFa, vBoxPlotShapeTRPV4, vBoxPlotShapeCldn5, vBoxPlotShapeVECad
-    objref graphSEClamp, graphTNFa, graphExpression, graphCldn5, graphVECad, graphICAM1, graphNFkB
-    objref plotShapeVoltage, plotShapeTNFa, plotShapeTRPV4, plotShapeCldn5, plotShapeVECad
-
+    
+    objref vBoxTRPV4Main
+    objref vBoxGraphSEClamp, vBoxGraphTNFa, vBoxGraphExpression, vBoxGraphOpenProb
+    objref vBoxGraphCldn5, vBoxGraphNFkB, vBoxGraphICAM1, vBoxGraphCCL2
+    objref vBoxGraphIca, vBoxGraphIna, vBoxGraphIk, vBoxGraphItrpv4
+    objref vBoxPlotShapeVoltage, vBoxPlotShapeTNFa, vBoxPlotShapeTRPV4
+    objref vBoxPlotShapeIca, vBoxPlotShapeIna, vBoxPlotShapeIk, vBoxPlotShapeItrpv4, vBoxPlotShapeOpenProb
+    objref graphSEClamp, graphTNFa, graphExpression, graphOpenProb
+    objref graphCldn5, graphNFkB, graphICAM1, graphCCL2
+    objref graphIca, graphIna, graphIk, graphItrpv4
+    objref plotShapeVoltage, plotShapeTNFa, plotShapeTRPV4
+    objref plotShapeIca, plotShapeIna, plotShapeIk, plotShapeItrpv4, plotShapeOpenProb
     
     objref fileTRPV4Results
     
@@ -46,7 +76,7 @@ begintemplate SimTRPV4
         isCustomProcAdvance = 1
         isAltRunControl = 1
         
-        outTxtFileRelPathName = "Text results/TRPV4_dynamics.txt"
+        outTxtFileRelPathName = "Text results/TRPV4_microglia_dynamics.txt"
         
         fileTRPV4Results = new File()
     }
@@ -56,31 +86,77 @@ begintemplate SimTRPV4
     }
     
     proc show() {
+        initIonConcentrations()
         initParamsTRPV4()
         seClampHelper.deployClamp(0)
         showTRPV4Ui()
     }
     
-    // Updates TRPV4 activation with TNFα stimulation
+    // Initialize ion concentrations (CRITICAL - was missing)
+    proc initIonConcentrations() {
+        forall {
+            if (ismembrane("TRPV4")) {
+                // Intracellular concentrations
+                cai = 0.0001   // 100 nM basal calcium
+                nai = 10       // 10 mM sodium inside
+                ki = 140       // 140 mM potassium inside
+                
+                // Extracellular concentrations
+                cao = 2.0      // 2 mM calcium outside
+                nao = 145      // 145 mM sodium outside
+                ko = 5         // 5 mM potassium outside
+            }
+        }
+    }
+    
+    // Custom advance procedure with TRPV4 updates
     proc advance() {
         fadvance()
         TRPV4Iteration(PX, PY, R_STIM, TimeBegin, Tau1, MaxTNFa, PX2, Tau2, PZ, AgonistConc, AntagonistConc, ShearStress)
+        
+        // Update all graphs
         graphSEClamp.exec_menu("View = plot")
         graphTNFa.exec_menu("View = plot")
         graphExpression.exec_menu("View = plot")
+        graphOpenProb.exec_menu("View = plot")
         graphCldn5.exec_menu("View = plot")
-        graphVECad.exec_menu("View = plot")
-        graphICAM1.exec_menu("View = plot")
         graphNFkB.exec_menu("View = plot")
+        graphICAM1.exec_menu("View = plot")
+        graphCCL2.exec_menu("View = plot")
+        graphIca.exec_menu("View = plot")
+        graphIna.exec_menu("View = plot")
+        graphIk.exec_menu("View = plot")
+        graphItrpv4.exec_menu("View = plot")
         plotShapeTNFa.exec_menu("View = plot")
         plotShapeTRPV4.exec_menu("View = plot")
+        plotShapeIca.exec_menu("View = plot")
+        plotShapeIna.exec_menu("View = plot")
+        plotShapeIk.exec_menu("View = plot")
+        plotShapeItrpv4.exec_menu("View = plot")
+        plotShapeOpenProb.exec_menu("View = plot")
         
-        // Write data to file: time, TNFa, TRPV4_expression, TRPV4_open_prob, Cldn5, VE-Cad, ICAM1, NFkB
-        fileTRPV4Results.printf("%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\n", t, dendrite_ref.o(0).sec.tnfa_conc_ext_TRPV4(0.5), dendrite_ref.o(0).sec.trpv4_expression_TRPV4(0.5), dendrite_ref.o(0).sec.trpv4_open_prob_TRPV4(0.5), dendrite_ref.o(0).sec.cldn5_expression_TRPV4(0.5), dendrite_ref.o(0).sec.vecad_expression_TRPV4(0.5), dendrite_ref.o(0).sec.icam1_expression_TRPV4(0.5), dendrite_ref.o(0).sec.nfkb_active_TRPV4(0.5))
+        // Write data to file
+        // Format: time, TNFa, TRPV4_expr, open_prob, NFkB, Cldn5, ICAM1, CCL2, ica, ina, ik, itrpv4
+        fileTRPV4Results.printf("%-8.3f\t%-8.5g\t%-8.5g\t%-8.5g\t%-8.5g\t%-8.5g\t%-8.5g\t%-8.5g\t%-8.5g\t%-8.5g\t%-8.5g\t%-8.5g\n", \
+            t, \
+            dendrite_ref.o(0).sec.tnfa_conc_ext_TRPV4(0.5), \
+            dendrite_ref.o(0).sec.trpv4_expression_TRPV4(0.5), \
+            dendrite_ref.o(0).sec.trpv4_open_prob_TRPV4(0.5), \
+            dendrite_ref.o(0).sec.nfkb_active_TRPV4(0.5), \
+            dendrite_ref.o(0).sec.cldn5_expression_TRPV4(0.5), \
+            dendrite_ref.o(0).sec.icam1_expression_TRPV4(0.5), \
+            dendrite_ref.o(0).sec.ccl2_expression_TRPV4(0.5), \
+            dendrite_ref.o(0).sec.ica(0.5), \
+            dendrite_ref.o(0).sec.ina(0.5), \
+            dendrite_ref.o(0).sec.ik(0.5), \
+            dendrite_ref.o(0).sec.itrpv4_TRPV4(0.5))
     }
     
     proc preRun() {
         fileTRPV4Results.wopen(outTxtFileRelPathName)
+        fileTRPV4Results.printf("# TRPV4 Microglia Simulation Results\n")
+        fileTRPV4Results.printf("# Time scaling: 1 ms = 1 minute real time\n")
+        fileTRPV4Results.printf("# Columns: time(ms), TNFa(pg/ml), TRPV4_expr, open_prob, NFkB, Cldn5, ICAM1, CCL2, ica, ina, ik, itrpv4\n")
     }
     
     proc preContinue() {
@@ -89,83 +165,74 @@ begintemplate SimTRPV4
     
     proc postRun() {
         fileTRPV4Results.close()
-        print "TRPV4 results saved to: ", outTxtFileRelPathName
+        print "TRPV4 microglia results saved to: ", outTxtFileRelPathName
     }
     
     proc simDismissHandler() {
         removeItemFromList(graphList[1], graphTNFa)
         removeItemFromList(graphList[1], graphSEClamp)
         removeItemFromList(graphList[1], graphExpression)
+        removeItemFromList(graphList[1], graphOpenProb)
         removeItemFromList(graphList[1], graphCldn5)
-        removeItemFromList(graphList[1], graphVECad)
-        removeItemFromList(graphList[1], graphICAM1)
         removeItemFromList(graphList[1], graphNFkB)
+        removeItemFromList(graphList[1], graphICAM1)
+        removeItemFromList(graphList[1], graphCCL2)
+        removeItemFromList(graphList[1], graphIca)
+        removeItemFromList(graphList[1], graphIna)
+        removeItemFromList(graphList[1], graphIk)
+        removeItemFromList(graphList[1], graphItrpv4)
         removeItemFromList(fast_flush_list, plotShapeTNFa)
         removeItemFromList(fast_flush_list, plotShapeVoltage)
         removeItemFromList(fast_flush_list, plotShapeTRPV4)
+        removeItemFromList(fast_flush_list, plotShapeIca)
+        removeItemFromList(fast_flush_list, plotShapeIna)
+        removeItemFromList(fast_flush_list, plotShapeIk)
+        removeItemFromList(fast_flush_list, plotShapeItrpv4)
+        removeItemFromList(fast_flush_list, plotShapeOpenProb)
         
         unmapIfNotNil(vBoxTRPV4Main)
         unmapIfNotNil(vBoxGraphSEClamp)
         unmapIfNotNil(vBoxGraphTNFa)
         unmapIfNotNil(vBoxGraphExpression)
+        unmapIfNotNil(vBoxGraphOpenProb)
         unmapIfNotNil(vBoxGraphCldn5)
-        unmapIfNotNil(vBoxGraphVECad)
-        unmapIfNotNil(vBoxGraphICAM1)
         unmapIfNotNil(vBoxGraphNFkB)
+        unmapIfNotNil(vBoxGraphICAM1)
+        unmapIfNotNil(vBoxGraphCCL2)
+        unmapIfNotNil(vBoxGraphIca)
+        unmapIfNotNil(vBoxGraphIna)
+        unmapIfNotNil(vBoxGraphIk)
+        unmapIfNotNil(vBoxGraphItrpv4)
         unmapIfNotNil(vBoxPlotShapeVoltage)
         unmapIfNotNil(vBoxPlotShapeTNFa)
         unmapIfNotNil(vBoxPlotShapeTRPV4)
+        unmapIfNotNil(vBoxPlotShapeIca)
+        unmapIfNotNil(vBoxPlotShapeIna)
+        unmapIfNotNil(vBoxPlotShapeIk)
+        unmapIfNotNil(vBoxPlotShapeItrpv4)
+        unmapIfNotNil(vBoxPlotShapeOpenProb)
         
         seClampHelper.removeClamp()
     }
     
+    // Initialize TRPV4 parameters
+    // NOTE: Does NOT override JSON parameters - only sets stimulation defaults
     proc initParamsTRPV4() {
-        // Parameters for TRPV4/TNFα stimulation - optimized for brain endothelial response
+        // Stimulation parameters
         PX = 0                  // X-coordinate of stimulation site
         PY = -20                // Y-coordinate of stimulation site  
         PZ = 0                  // Z-coordinate of stimulation site
-        PX2 = 0                 // Distance in x-coordinate of second stimulation site
-        R_STIM = 5.0            // Radius of TNFα stimulation
-        TimeBegin = 5           // Time of stimulation onset
-        Tau1 = 5                // Rise time of TNFα application
-        Tau2 = 50               // Decay time of TNFα application
-        MaxTNFa = 10.0          // Maximum TNFα concentration in pg/ml
+        PX2 = 0                 // Distance to second stimulation site
+        R_STIM = 10.0           // Radius of TNFa stimulation (um)
+        TimeBegin = 100         // Time of stimulation onset (ms = 100 min real)
+        Tau1 = 30               // Rise time (ms = 30 min real)
+        Tau2 = 300              // Decay time (ms = 5 hours real)
+        MaxTNFa = 10.0          // Maximum TNFa concentration (pg/ml)
         
         // Pharmacological modulation
         AgonistConc = 0         // TRPV4 agonist (GSK1016790A) in nM
         AntagonistConc = 0      // TRPV4 antagonist (GSK2193874) in nM
         ShearStress = 0         // Shear stress level (dyn/cm2)
-
-        forall {
-            if (ismembrane("TRPV4")) {
-                // Intracellular calcium concentration (mM)
-                cai = 0.0001   // Calcium inside (basal level)
-                
-                // Initialize TRPV4 expression parameters
-                trpv4_baseline = 1.0
-                tnfa_sensitivity = 0.5
-                tnfa_threshold_trpv4 = 1.0
-                max_expression_fold = 3.0
-                
-                // Initialize channel activation parameters
-                agonist_conc = 0
-                antagonist_conc = 0
-                inflammatory_sensitivity = 0.3
-                shear_stress = 0
-                ca_sensitivity_trpv4 = 1.5
-                
-                // Initialize junction protein parameters
-                cldn5_baseline = 1.0
-                cldn5_trpv4_dependence = 0.6
-                vecad_baseline = 1.0
-                vecad_trpv4_dependence = 0.4
-                
-                // Initialize adhesion molecule parameters
-                icam1_baseline = 0.3
-                vcam1_baseline = 0.2
-                sele_baseline = 0.1
-            }
-        }
     }
     
     // Shows TRPV4 simulation UI
@@ -174,31 +241,29 @@ begintemplate SimTRPV4
         vBoxTRPV4Main.intercept(1)
         {
             xpanel("")
-            xlabel("=============== TRPV4 Channel - Blood-Brain Barrier Dysfunction ===============")
-            xlabel("Includes: TNFa-induced expression, Ca2+ influx, Barrier proteins (Cldn5, VE-Cad)")
-            xlabel("              Adhesion molecules (ICAM1, VCAM1, E-selectin), NFkB pathway")
-            xlabel("================================================================================")
+            xlabel("============= TRPV4 Channel - Microglia Simulation =============")
+            xlabel("Time scaling: 1 ms = 1 minute real time")
+            xlabel("2500 ms simulation = ~42 hours real time")
+            xlabel("================================================================")
             xpvalue("X coordinate (um)", &PX, 1)
             xpvalue("Y coordinate (um)", &PY, 1)
             xpvalue("Z coordinate (um)", &PZ, 1)
             xpvalue("Stimulation radius (um)", &R_STIM, 1)
             xpvalue("Stimulation onset (ms)", &TimeBegin, 1)
-            xpvalue("Maximum TNFα (pg/ml)", &MaxTNFa, 1)
-            xpvalue("Distance between two sites (um)", &PX2, 1)
+            xpvalue("Maximum TNFa (pg/ml)", &MaxTNFa, 1)
             xpvalue("Tau rise (ms)", &Tau1, 1)
             xpvalue("Tau decay (ms)", &Tau2, 1)
-            xlabel("================================================================================")
-            xlabel("================= Pharmacological Modulation =================")
+            xlabel("================================================================")
+            xlabel("============== Pharmacological Modulation ==============")
             xpvalue("TRPV4 Agonist (GSK1016790A, nM)", &AgonistConc, 1)
             xpvalue("TRPV4 Antagonist (GSK2193874, nM)", &AntagonistConc, 1)
             xpvalue("Shear Stress (dyn/cm2)", &ShearStress, 1)
-            xlabel("================================================================================")
             xpanel(625,164)
             
             xpanel("")
             xlabel("================== Voltage clamp of soma ==================")
-            xpvalue("Somatic voltage clamp", &seClampHelper.seClamp.amp1, 1)
-            xpvalue("Clamp duration", &seClampHelper.seClamp.dur1, 1)
+            xpvalue("Somatic voltage clamp (mV)", &seClampHelper.seClamp.amp1, 1)
+            xpvalue("Clamp duration (ms)", &seClampHelper.seClamp.dur1, 1)
             xlabel("--------------------------------------------------------------------------------")
             xpvalue("Simulation time (ms)", &tstop, 1)
             xbutton("Run simulation", "altRunControlWidget.initAndRunHandler()")
@@ -207,35 +272,33 @@ begintemplate SimTRPV4
         vBoxTRPV4Main.intercept(0)
         vBoxTRPV4Main.map("TRPV4 settings", 195, 102, 400, 650)
         
+        // SEClamp Graph
         vBoxGraphSEClamp = new VBox()
         vBoxGraphSEClamp.intercept(1)
         {
             graphSEClamp = new Graph(0)
             graphList[1].append(graphSEClamp)
-            graphSEClamp.size(0,150,-0.015,-5.82077e-010)
-            graphSEClamp.view(0, -0.015, 150, 0.015, 50, 705, 380, 200)
-            graphSEClamp.addexpr("seClampHelper.seClamp.i", 1, 1, 0.8, 0.9, 2)
-            graphSEClamp.yaxis(0)
-            graphSEClamp.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
-            graphSEClamp.label(0.1, 0.09, "Clamp current (nA)", 2, 1, 0, 1, 1)
+            graphSEClamp.size(0, 2500, -100, 50)
+            graphSEClamp.view(0, -100, 2500, 150, 50, 100, 350, 180)
+            graphSEClamp.addvar("v(.5)", 1, 1, 0.8, 0.9, 2)
+            graphSEClamp.label(0.5, 0.95, "Membrane Potential", 2, 1, 0, 1, 1)
         }
         vBoxGraphSEClamp.intercept(0)
-        vBoxGraphSEClamp.map("SE Clamp Current vs Time", 50, 705, 380, 200)
+        vBoxGraphSEClamp.map("Voltage vs Time", 50, 100, 350, 180)
 
+        // TNFa Concentration Graph
         vBoxGraphTNFa = new VBox()
         vBoxGraphTNFa.intercept(1)
         {
             graphTNFa = new Graph(0)
             graphList[1].append(graphTNFa)
-            graphTNFa.size(0,150,-0.5,11)
-            graphTNFa.view(0, -0.5, 150, 11, 440, 705, 380, 200)
-            graphTNFa.addvar("dendrite_ref.o(0).sec.tnfa_conc_ext_TRPV4( 0.5 )", 1, 1, 0.8, 0.9, 2)
-            graphTNFa.yaxis(0)
-            graphTNFa.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
-            graphTNFa.label(0.1, 0.09, "TNFa Concentration (pg/ml)", 2, 1, 0, 1, 1)
+            graphTNFa.size(0, 2500, 0, 15)
+            graphTNFa.view(0, 0, 2500, 15, 410, 100, 350, 180)
+            graphTNFa.addvar("dendrite_ref.o(0).sec.tnfa_conc_ext_TRPV4(0.5)", 2, 1, 0.8, 0.9, 2)
+            graphTNFa.label(0.5, 0.95, "TNFa (pg/ml)", 2, 1, 0, 1, 1)
         }
         vBoxGraphTNFa.intercept(0)
-        vBoxGraphTNFa.map("TNFa Profile", 440, 705, 380, 200)
+        vBoxGraphTNFa.map("TNFa Concentration", 410, 100, 350, 180)
 
         // TRPV4 Expression Graph
         vBoxGraphExpression = new VBox()
@@ -243,222 +306,353 @@ begintemplate SimTRPV4
         {
             graphExpression = new Graph(0)
             graphList[1].append(graphExpression)
-            graphExpression.size(0,150,0.9,3.1)
-            graphExpression.view(0, 0.9, 150, 2.2, 830, 705, 380, 200)
-            graphExpression.addvar("dendrite_ref.o(0).sec.trpv4_expression_TRPV4( 0.5 )", 2, 1, 0.8, 0.9, 2)
-            graphExpression.yaxis(0)
-            graphExpression.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
-            graphExpression.label(0.1, 0.09, "TRPV4 Expression (fold)", 2, 1, 0, 1, 1)
+            graphExpression.size(0, 2500, 0, 5)
+            graphExpression.view(0, 0, 2500, 5, 770, 100, 350, 180)
+            graphExpression.addvar("dendrite_ref.o(0).sec.trpv4_expression_TRPV4(0.5)", 3, 1, 0.8, 0.9, 2)
+            graphExpression.label(0.5, 0.95, "TRPV4 Expression (fold)", 2, 1, 0, 1, 1)
         }
         vBoxGraphExpression.intercept(0)
-        vBoxGraphExpression.map("TRPV4 Expression vs Time", 830, 705, 380, 200)
-        
-        // Claudin-5 Expression Graph (Tight Junction)
-        vBoxGraphCldn5 = new VBox()
-        vBoxGraphCldn5.intercept(1)
-        {
-            graphCldn5 = new Graph(0)
-            graphList[1].append(graphCldn5)
-            graphCldn5.size(0,150,0,1.5)
-            graphCldn5.view(0, 0, 150, 1.5, 1220, 705, 380, 200)
-            graphCldn5.addvar("dendrite_ref.o(0).sec.cldn5_expression_TRPV4( 0.5 )", 3, 1, 0.8, 0.9, 2)
-            graphCldn5.yaxis(0)
-            graphCldn5.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
-            graphCldn5.label(0.1, 0.09, "Claudin-5 Expression", 2, 1, 0, 1, 1)
-        }
-        vBoxGraphCldn5.intercept(0)
-        vBoxGraphCldn5.map("Claudin-5 Expression vs Time", 1220, 705, 380, 200)
+        vBoxGraphExpression.map("TRPV4 Expression", 770, 100, 350, 180)
 
-        // VE-Cadherin Expression Graph (Adherens Junction)
-        vBoxGraphVECad = new VBox()
-        vBoxGraphVECad.intercept(1)
+        // TRPV4 Open Probability Graph
+        vBoxGraphOpenProb = new VBox()
+        vBoxGraphOpenProb.intercept(1)
         {
-            graphVECad = new Graph(0)
-            graphList[1].append(graphVECad)
-            graphVECad.size(0,150,0,1.5)
-            graphVECad.view(0, 0, 150, 1.5, 1610, 705, 380, 200)
-            graphVECad.addvar("dendrite_ref.o(0).sec.vecad_expression_TRPV4( 0.5 )", 4, 1, 0.8, 0.9, 2)
-            graphVECad.yaxis(0)
-            graphVECad.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
-            graphVECad.label(0.1, 0.09, "VE-Cadherin Expression", 2, 1, 0, 1, 1)
+            graphOpenProb = new Graph(0)
+            graphList[1].append(graphOpenProb)
+            graphOpenProb.size(0, 2500, 0, 1)
+            graphOpenProb.view(0, 0, 2500, 1, 1130, 100, 350, 180)
+            graphOpenProb.addvar("dendrite_ref.o(0).sec.trpv4_open_prob_TRPV4(0.5)", 4, 1, 0.8, 0.9, 2)
+            graphOpenProb.label(0.5, 0.95, "TRPV4 Open Probability", 2, 1, 0, 1, 1)
         }
-        vBoxGraphVECad.intercept(0)
-        vBoxGraphVECad.map("VE-Cadherin Expression vs Time", 1610, 705, 380, 200)
+        vBoxGraphOpenProb.intercept(0)
+        vBoxGraphOpenProb.map("TRPV4 Open Prob", 1130, 100, 350, 180)
 
-        // ICAM1 Expression Graph (Cell Adhesion Molecule)
-        vBoxGraphICAM1 = new VBox()
-        vBoxGraphICAM1.intercept(1)
-        {
-            graphICAM1 = new Graph(0)
-            graphList[1].append(graphICAM1)
-            graphICAM1.size(0,150,0,3)
-            graphICAM1.view(0, 0, 150, 3, 2000, 705, 380, 200)
-            graphICAM1.addvar("dendrite_ref.o(0).sec.icam1_expression_TRPV4( 0.5 )", 5, 1, 0.8, 0.9, 2)
-            graphICAM1.yaxis(0)
-            graphICAM1.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
-            graphICAM1.label(0.1, 0.09, "ICAM1 Expression", 2, 1, 0, 1, 1)
-        }
-        vBoxGraphICAM1.intercept(0)
-        vBoxGraphICAM1.map("ICAM1 Expression vs Time", 2000, 705, 380, 200)
-
-        // NFκB Activation Graph
+        // NFkB Activation Graph
         vBoxGraphNFkB = new VBox()
         vBoxGraphNFkB.intercept(1)
         {
             graphNFkB = new Graph(0)
             graphList[1].append(graphNFkB)
-            graphNFkB.size(0,150,0,1)
-            graphNFkB.view(0, 0, 150, 1, 2390, 705, 380, 200)
-            graphNFkB.addvar("dendrite_ref.o(0).sec.nfkb_active_TRPV4( 0.5 )", 6, 1, 0.8, 0.9, 2)
-            graphNFkB.yaxis(0)
-            graphNFkB.label(0.5, 0.9, "Time (ms)", 2, 1, 0, 1, 1)
-            graphNFkB.label(0.1, 0.09, "NFkB Activation", 2, 1, 0, 1, 1)
+            graphNFkB.size(0, 2500, 0, 2)
+            graphNFkB.view(0, 0, 2500, 2, 50, 290, 350, 180)
+            graphNFkB.addvar("dendrite_ref.o(0).sec.nfkb_active_TRPV4(0.5)", 5, 1, 0.8, 0.9, 2)
+            graphNFkB.label(0.5, 0.95, "NFkB Activation", 2, 1, 0, 1, 1)
         }
         vBoxGraphNFkB.intercept(0)
-        vBoxGraphNFkB.map("NFkB Activation vs Time", 2390, 705, 380, 200)
+        vBoxGraphNFkB.map("NFkB Activation", 50, 290, 350, 180)
+
+        // Claudin-5 Expression Graph
+        vBoxGraphCldn5 = new VBox()
+        vBoxGraphCldn5.intercept(1)
+        {
+            graphCldn5 = new Graph(0)
+            graphList[1].append(graphCldn5)
+            graphCldn5.size(0, 2500, 0, 2)
+            graphCldn5.view(0, 0, 2500, 2, 410, 290, 350, 180)
+            graphCldn5.addvar("dendrite_ref.o(0).sec.cldn5_expression_TRPV4(0.5)", 6, 1, 0.8, 0.9, 2)
+            graphCldn5.label(0.5, 0.95, "Claudin-5 Expression", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphCldn5.intercept(0)
+        vBoxGraphCldn5.map("Claudin-5 Expression", 410, 290, 350, 180)
+
+        // ICAM1 Expression Graph
+        vBoxGraphICAM1 = new VBox()
+        vBoxGraphICAM1.intercept(1)
+        {
+            graphICAM1 = new Graph(0)
+            graphList[1].append(graphICAM1)
+            graphICAM1.size(0, 2500, 0, 5)
+            graphICAM1.view(0, 0, 2500, 5, 770, 290, 350, 180)
+            graphICAM1.addvar("dendrite_ref.o(0).sec.icam1_expression_TRPV4(0.5)", 7, 1, 0.8, 0.9, 2)
+            graphICAM1.label(0.5, 0.95, "ICAM1 Expression", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphICAM1.intercept(0)
+        vBoxGraphICAM1.map("ICAM1 Expression", 770, 290, 350, 180)
+
+        // CCL2 Expression Graph
+        vBoxGraphCCL2 = new VBox()
+        vBoxGraphCCL2.intercept(1)
+        {
+            graphCCL2 = new Graph(0)
+            graphList[1].append(graphCCL2)
+            graphCCL2.size(0, 2500, 0, 3)
+            graphCCL2.view(0, 0, 2500, 3, 1130, 290, 350, 180)
+            graphCCL2.addvar("dendrite_ref.o(0).sec.ccl2_expression_TRPV4(0.5)", 8, 1, 0.8, 0.9, 2)
+            graphCCL2.label(0.5, 0.95, "CCL2 Expression", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphCCL2.intercept(0)
+        vBoxGraphCCL2.map("CCL2 Expression", 1130, 290, 350, 180)
+
+        // Calcium Current (ica) Graph
+        vBoxGraphIca = new VBox()
+        vBoxGraphIca.intercept(1)
+        {
+            graphIca = new Graph(0)
+            graphList[1].append(graphIca)
+            graphIca.size(0, 2500, -0.01, 0.001)
+            graphIca.view(0, -0.01, 2500, 0.011, 50, 480, 350, 180)
+            graphIca.addvar("dendrite_ref.o(0).sec.ica(0.5)", 1, 1, 0.8, 0.9, 2)
+            graphIca.label(0.5, 0.95, "ica (mA/cm2)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphIca.intercept(0)
+        vBoxGraphIca.map("Calcium Current", 50, 480, 350, 180)
+
+        // Sodium Current (ina) Graph
+        vBoxGraphIna = new VBox()
+        vBoxGraphIna.intercept(1)
+        {
+            graphIna = new Graph(0)
+            graphList[1].append(graphIna)
+            graphIna.size(0, 2500, -0.001, 0.0001)
+            graphIna.view(0, -0.001, 2500, 0.0011, 410, 480, 350, 180)
+            graphIna.addvar("dendrite_ref.o(0).sec.ina(0.5)", 2, 1, 0.8, 0.9, 2)
+            graphIna.label(0.5, 0.95, "ina (mA/cm2)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphIna.intercept(0)
+        vBoxGraphIna.map("Sodium Current", 410, 480, 350, 180)
+
+        // Potassium Current (ik) Graph
+        vBoxGraphIk = new VBox()
+        vBoxGraphIk.intercept(1)
+        {
+            graphIk = new Graph(0)
+            graphList[1].append(graphIk)
+            graphIk.size(0, 2500, -0.0001, 0.001)
+            graphIk.view(0, -0.0001, 2500, 0.0011, 770, 480, 350, 180)
+            graphIk.addvar("dendrite_ref.o(0).sec.ik(0.5)", 3, 1, 0.8, 0.9, 2)
+            graphIk.label(0.5, 0.95, "ik (mA/cm2)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphIk.intercept(0)
+        vBoxGraphIk.map("Potassium Current", 770, 480, 350, 180)
+
+        // Total TRPV4 Current (itrpv4) Graph
+        vBoxGraphItrpv4 = new VBox()
+        vBoxGraphItrpv4.intercept(1)
+        {
+            graphItrpv4 = new Graph(0)
+            graphList[1].append(graphItrpv4)
+            graphItrpv4.size(0, 2500, -0.01, 0.001)
+            graphItrpv4.view(0, -0.01, 2500, 0.011, 1130, 480, 350, 180)
+            graphItrpv4.addvar("dendrite_ref.o(0).sec.itrpv4_TRPV4(0.5)", 4, 1, 0.8, 0.9, 2)
+            graphItrpv4.label(0.5, 0.95, "itrpv4 (mA/cm2)", 2, 1, 0, 1, 1)
+        }
+        vBoxGraphItrpv4.intercept(0)
+        vBoxGraphItrpv4.map("Total TRPV4 Current", 1130, 480, 350, 180)
         
+        // PlotShape for TNFa Distribution
         vBoxPlotShapeTNFa = new VBox()
         vBoxPlotShapeTNFa.intercept(1)
         {
             plotShapeTNFa = new PlotShape(0)
             fast_flush_list.append(plotShapeTNFa)
             plotShapeTNFa.size(-50,50,-50,50)
-            plotShapeTNFa.view(-50, -49.9003, 100, 100, 50, 102, 380, 380)
+            plotShapeTNFa.view(-50, -50, 100, 100, 50, 670, 280, 280)
             plotShapeTNFa.exec_menu("Shape Plot")
             plotShapeTNFa.exec_menu("View = plot")
             plotShapeTNFa.variable("tnfa_conc_ext_TRPV4")
-            plotShapeTNFa.label(0.5, 0.09, "TNFa (pg/ml)", 2, 1, 0, 1, 1)
+            plotShapeTNFa.label(0.3, 0.05, "TNFa (pg/ml)", 2, 1, 0, 1, 1)
             plotShapeTNFa.show(0)
-            plotShapeTNFa.scale(0,10)
+            plotShapeTNFa.scale(0, 12)
         }
         vBoxPlotShapeTNFa.intercept(0)
-        vBoxPlotShapeTNFa.map("TNFa Distribution", 50, 102, 380, 380)
+        vBoxPlotShapeTNFa.map("TNFa Distribution", 50, 670, 280, 280)
         
-        vBoxPlotShapeVoltage = new VBox()
-        vBoxPlotShapeVoltage.intercept(1)
-        {
-            plotShapeVoltage = new PlotShape(0)
-            fast_flush_list.append(plotShapeVoltage)
-            plotShapeVoltage.size(-50,50,-50,50)
-            plotShapeVoltage.view(-50, -49.9003, 100, 100, 440, 102, 380, 380)
-            plotShapeVoltage.exec_menu("Shape Plot")
-            plotShapeVoltage.exec_menu("View = plot")
-            plotShapeVoltage.variable("v")
-            plotShapeVoltage.label(0.1, 0.99, "Transmembrane Voltage (mV)", 2, 1, 0, 1, 1)
-            plotShapeVoltage.show(0)
-            plotShapeVoltage.scale(-87, -80)
-        }
-        vBoxPlotShapeVoltage.intercept(0)
-        vBoxPlotShapeVoltage.map("Voltage", 440, 102, 380, 380)
-        
+        // PlotShape for TRPV4 Open Probability
         vBoxPlotShapeTRPV4 = new VBox()
         vBoxPlotShapeTRPV4.intercept(1)
         {
             plotShapeTRPV4 = new PlotShape(0)
             fast_flush_list.append(plotShapeTRPV4)
             plotShapeTRPV4.size(-50,50,-50,50)
-            plotShapeTRPV4.view(-50, -49.9003, 100, 100, 830, 102, 380, 380)
+            plotShapeTRPV4.view(-50, -50, 100, 100, 340, 670, 280, 280)
             plotShapeTRPV4.exec_menu("Shape Plot")
             plotShapeTRPV4.exec_menu("View = plot")
             plotShapeTRPV4.variable("trpv4_open_prob_TRPV4")
-            plotShapeTRPV4.label(0.15, 0.99, "TRPV4 Open Probability", 2, 1, 0, 1, 1)
+            plotShapeTRPV4.label(0.2, 0.05, "TRPV4 Open Prob", 2, 1, 0, 1, 1)
             plotShapeTRPV4.show(0)
-            plotShapeTRPV4.scale(0,1)
+            plotShapeTRPV4.scale(0, 1)
         }
         vBoxPlotShapeTRPV4.intercept(0)
-        vBoxPlotShapeTRPV4.map("TRPV4 Channel Activity", 830, 102, 380, 380)
-    // Claudin-5 Expression PlotShape
-        vBoxPlotShapeCldn5 = new VBox()
-        vBoxPlotShapeCldn5.intercept(1)
-        {
-            plotShapeCldn5 = new PlotShape(0)
-            fast_flush_list.append(plotShapeCldn5)
-            plotShapeCldn5.size(-50,50,-50,50)
-            plotShapeCldn5.view(-50, -49.9003, 100, 100, 1220, 102, 380, 380)
-            plotShapeCldn5.exec_menu("Shape Plot")
-            plotShapeCldn5.exec_menu("View = plot")
-            plotShapeCldn5.variable("cldn5_expression_TRPV4")
-            plotShapeCldn5.label(0.15, 0.99, "Claudin-5 Expression", 2, 1, 0, 1, 1)
-            plotShapeCldn5.show(0)
-            plotShapeCldn5.scale(0, 2)
-        }
-        vBoxPlotShapeCldn5.intercept(0)
-        vBoxPlotShapeCldn5.map("Claudin-5 Distribution", 1220, 102, 380, 380)
+        vBoxPlotShapeTRPV4.map("TRPV4 Activity", 340, 670, 280, 280)
         
-        // VE-Cadherin Expression PlotShape
-        vBoxPlotShapeVECad = new VBox()
-        vBoxPlotShapeVECad.intercept(1)
+        // PlotShape for Voltage
+        vBoxPlotShapeVoltage = new VBox()
+        vBoxPlotShapeVoltage.intercept(1)
         {
-            plotShapeVECad = new PlotShape(0)
-            fast_flush_list.append(plotShapeVECad)
-            plotShapeVECad.size(-50,50,-50,50)
-            plotShapeVECad.view(-50, -49.9003, 100, 100, 1610, 102, 380, 380)
-            plotShapeVECad.exec_menu("Shape Plot")
-            plotShapeVECad.exec_menu("View = plot")
-            plotShapeVECad.variable("vecad_expression_TRPV4")
-            plotShapeVECad.label(0.15, 0.99, "VE-Cadherin Expression", 2, 1, 0, 1, 1)
-            plotShapeVECad.show(0)
-            plotShapeVECad.scale(0, 2)
+            plotShapeVoltage = new PlotShape(0)
+            fast_flush_list.append(plotShapeVoltage)
+            plotShapeVoltage.size(-50,50,-50,50)
+            plotShapeVoltage.view(-50, -50, 100, 100, 630, 670, 280, 280)
+            plotShapeVoltage.exec_menu("Shape Plot")
+            plotShapeVoltage.exec_menu("View = plot")
+            plotShapeVoltage.variable("v")
+            plotShapeVoltage.label(0.2, 0.05, "Voltage (mV)", 2, 1, 0, 1, 1)
+            plotShapeVoltage.show(0)
+            plotShapeVoltage.scale(-85, -50)
         }
-        vBoxPlotShapeVECad.intercept(0)
-        vBoxPlotShapeVECad.map("VE-Cadherin Distribution", 1610, 102, 380, 380)
-    }
+        vBoxPlotShapeVoltage.intercept(0)
+        vBoxPlotShapeVoltage.map("Membrane Voltage", 630, 670, 280, 280)
 
+        // PlotShape for Calcium Current (ica)
+        vBoxPlotShapeIca = new VBox()
+        vBoxPlotShapeIca.intercept(1)
+        {
+            plotShapeIca = new PlotShape(0)
+            fast_flush_list.append(plotShapeIca)
+            plotShapeIca.size(-50,50,-50,50)
+            plotShapeIca.view(-50, -50, 100, 100, 920, 670, 280, 280)
+            plotShapeIca.exec_menu("Shape Plot")
+            plotShapeIca.exec_menu("View = plot")
+            plotShapeIca.variable("ica")
+            plotShapeIca.label(0.2, 0.05, "ica (mA/cm2)", 2, 1, 0, 1, 1)
+            plotShapeIca.show(0)
+            plotShapeIca.scale(-0.01, 0)
+        }
+        vBoxPlotShapeIca.intercept(0)
+        vBoxPlotShapeIca.map("Calcium Current", 920, 670, 280, 280)
+
+        // PlotShape for Sodium Current (ina)
+        vBoxPlotShapeIna = new VBox()
+        vBoxPlotShapeIna.intercept(1)
+        {
+            plotShapeIna = new PlotShape(0)
+            fast_flush_list.append(plotShapeIna)
+            plotShapeIna.size(-50,50,-50,50)
+            plotShapeIna.view(-50, -50, 100, 100, 1210, 670, 280, 280)
+            plotShapeIna.exec_menu("Shape Plot")
+            plotShapeIna.exec_menu("View = plot")
+            plotShapeIna.variable("ina")
+            plotShapeIna.label(0.2, 0.05, "ina (mA/cm2)", 2, 1, 0, 1, 1)
+            plotShapeIna.show(0)
+            plotShapeIna.scale(-0.001, 0)
+        }
+        vBoxPlotShapeIna.intercept(0)
+        vBoxPlotShapeIna.map("Sodium Current", 1210, 670, 280, 280)
+
+        // PlotShape for Potassium Current (ik)
+        vBoxPlotShapeIk = new VBox()
+        vBoxPlotShapeIk.intercept(1)
+        {
+            plotShapeIk = new PlotShape(0)
+            fast_flush_list.append(plotShapeIk)
+            plotShapeIk.size(-50,50,-50,50)
+            plotShapeIk.view(-50, -50, 100, 100, 50, 960, 280, 280)
+            plotShapeIk.exec_menu("Shape Plot")
+            plotShapeIk.exec_menu("View = plot")
+            plotShapeIk.variable("ik")
+            plotShapeIk.label(0.2, 0.05, "ik (mA/cm2)", 2, 1, 0, 1, 1)
+            plotShapeIk.show(0)
+            plotShapeIk.scale(0, 0.001)
+        }
+        vBoxPlotShapeIk.intercept(0)
+        vBoxPlotShapeIk.map("Potassium Current", 50, 960, 280, 280)
+
+        // PlotShape for Total TRPV4 Current (itrpv4)
+        vBoxPlotShapeItrpv4 = new VBox()
+        vBoxPlotShapeItrpv4.intercept(1)
+        {
+            plotShapeItrpv4 = new PlotShape(0)
+            fast_flush_list.append(plotShapeItrpv4)
+            plotShapeItrpv4.size(-50,50,-50,50)
+            plotShapeItrpv4.view(-50, -50, 100, 100, 340, 960, 280, 280)
+            plotShapeItrpv4.exec_menu("Shape Plot")
+            plotShapeItrpv4.exec_menu("View = plot")
+            plotShapeItrpv4.variable("itrpv4_TRPV4")
+            plotShapeItrpv4.label(0.2, 0.05, "itrpv4 (mA/cm2)", 2, 1, 0, 1, 1)
+            plotShapeItrpv4.show(0)
+            plotShapeItrpv4.scale(-0.01, 0)
+        }
+        vBoxPlotShapeItrpv4.intercept(0)
+        vBoxPlotShapeItrpv4.map("Total TRPV4 Current", 340, 960, 280, 280)
+
+        // PlotShape for Open Probability
+        vBoxPlotShapeOpenProb = new VBox()
+        vBoxPlotShapeOpenProb.intercept(1)
+        {
+            plotShapeOpenProb = new PlotShape(0)
+            fast_flush_list.append(plotShapeOpenProb)
+            plotShapeOpenProb.size(-50,50,-50,50)
+            plotShapeOpenProb.view(-50, -50, 100, 100, 630, 960, 280, 280)
+            plotShapeOpenProb.exec_menu("Shape Plot")
+            plotShapeOpenProb.exec_menu("View = plot")
+            plotShapeOpenProb.variable("trpv4_open_prob_TRPV4")
+            plotShapeOpenProb.label(0.2, 0.05, "Open Prob", 2, 1, 0, 1, 1)
+            plotShapeOpenProb.show(0)
+            plotShapeOpenProb.scale(0, 1)
+        }
+        vBoxPlotShapeOpenProb.intercept(0)
+        vBoxPlotShapeOpenProb.map("Open Probability", 630, 960, 280, 280)
+    }
     
 endtemplate SimTRPV4
 
 
-// Updates TRPV4 activation with TNFα, agonist, antagonist, and shear stress
-// $1 - X coordinate circle center
-// $2 - Y coordinate circle center  
-// $3 - Radius of stimulation area
-// $4 - TimeBegin
-// $5 - Tau1 (rise time)
-// $6 - Maximum TNFα (pg/ml)
+// ==============================================================================
+// TRPV4Iteration - Updates TRPV4 activation with TNFa, agonist, antagonist, shear
+// ==============================================================================
+// Parameters:
+// $1 - X coordinate of stimulation center
+// $2 - Y coordinate of stimulation center  
+// $3 - Radius of stimulation area (um)
+// $4 - TimeBegin (ms)
+// $5 - Tau1 (rise time, ms)
+// $6 - Maximum TNFa (pg/ml)
 // $7 - PX2 (second stimulation site offset)
-// $8 - Tau2 (decay time)
-// $9 - Z coordinate circle center
+// $8 - Tau2 (decay time, ms)
+// $9 - Z coordinate
 // $10 - Agonist concentration (nM)
 // $11 - Antagonist concentration (nM)
 // $12 - Shear stress (dyn/cm2)
+// ==============================================================================
 proc TRPV4Iteration() { local tau1, tau2, BaselineTNFa, dist_sq1, dist_sq2, z_diff, tnfa_profile
     tau1 = $5
     tau2 = $8
-    BaselineTNFa = 0
+    BaselineTNFa = 0.1  // Small baseline TNFa (pg/ml)
     
     forall {
-        // Check if the section has the TRPV4 mechanism
         if (ismembrane("TRPV4")) {
-            // Calculate distances
+            // Calculate distances (3D)
             dist_sq1 = dist2D_PtToPt_squared($1, $2, x3d(1), y3d(1))
             dist_sq2 = dist2D_PtToPt_squared($1+$7, $2, x3d(1), y3d(1))
             z_diff = abs($9-z3d(1))
             
             // Check if within stimulation area
-            if (((dist_sq1 < $3^2) || (dist_sq2 < $3^2)) && (z_diff < 10) && (t > $4)) {
-                // Apply TNFα with double exponential
+            if (((dist_sq1 < $3*$3) || (dist_sq2 < $3*$3)) && (z_diff < 15) && (t > $4)) {
+                // Alpha function for TNFa profile
+                // More realistic than double exponential for cytokine release
                 if (tau2 != tau1) {
-                    tnfa_profile = BaselineTNFa + $6*(tau2/(tau2-tau1)*(-exp(-(t-$4)/tau1) + exp(-(t-$4)/tau2)))
+                    tnfa_profile = BaselineTNFa + $6 * (tau2/(tau2-tau1)) * (exp(-(t-$4)/tau2) - exp(-(t-$4)/tau1))
                 } else {
-                    tnfa_profile = BaselineTNFa + $6*((t-$4)/tau1)*exp(-(t-$4)/tau1)
+                    tnfa_profile = BaselineTNFa + $6 * ((t-$4)/tau1) * exp(1 - (t-$4)/tau1)
                 }
                 
-                // Apply threshold
-                if (tnfa_profile > tnfa_threshold_trpv4_TRPV4) {
-                    tnfa_conc_ext = tnfa_profile
-                } else {
-                    tnfa_conc_ext = 0
+                // Ensure non-negative
+                if (tnfa_profile < 0) {
+                    tnfa_profile = BaselineTNFa
                 }
+                
+                // Spatial decay based on distance
+                if (dist_sq1 < $3*$3) {
+                    tnfa_profile = tnfa_profile * (1 - sqrt(dist_sq1)/($3*1.5))
+                }
+                
+                tnfa_conc_ext_TRPV4 = tnfa_profile
             } else {
-                tnfa_conc_ext = BaselineTNFa
+                tnfa_conc_ext_TRPV4 = BaselineTNFa
             }
             
-            // Apply pharmacological modulators
-            agonist_conc = $10
-            antagonist_conc = $11
+            // Apply pharmacological modulators (globally)
+            agonist_conc_TRPV4 = $10
+            antagonist_conc_TRPV4 = $11
             
             // Apply mechanical stimulus (shear stress)
-            shear_stress = $12
+            shear_stress_TRPV4 = $12
         }
     }
 }
+
+
+
+
+

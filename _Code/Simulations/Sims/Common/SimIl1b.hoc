@@ -5,6 +5,12 @@ proc IL1bIteration() { }
 proc InsertIL1bMechanisms() {
     insert IL1b
     
+    // === GEOMETRY-AWARE PARAMETERS (NEW) ===
+    geometry_scale_mode_IL1b = 1         // 0=off, 1=surface, 2=volume, 3=hybrid
+    reference_diameter_IL1b = 1.0        // Reference diameter (um)
+    geometry_scaling_factor_IL1b = 1.0   // Overall scaling strength
+
+    
     // === BASIC PARAMETERS ===
     // LPS stimulation
     lps_stim_IL1b = 0
@@ -119,10 +125,10 @@ begintemplate SimIL1b
     objref vBoxIL1bMain, vBoxGraphSEClamp, vBoxGraphLPS, vBoxGraphIL1bConc
     objref vBoxGraphProIL1b, vBoxGraphMatureIL1b, vBoxGraphInflammasome
     objref vBoxGraphIL10, vBoxGraphTGFb, vBoxGraphTNFa
-    objref vBoxPlotShapeVoltage, vBoxPlotShapeLPS, vBoxPlotShapeIL1b
+    objref vBoxPlotShapeVoltage, vBoxPlotShapeLPS, vBoxPlotShapeIL1b, vBoxPlotShapeIL1bTotal
     objref graphSEClamp, graphLPS, graphIL1bConc, graphProIL1b, graphMatureIL1b
     objref graphInflammasome, graphIL10, graphTGFb, graphTNFa
-    objref plotShapeVoltage, plotShapeLPS, plotShapeIL1b
+    objref plotShapeVoltage, plotShapeLPS, plotShapeIL1b, plotShapeIL1bTotal
     
     // Statistics file
     objref fileIL1bResults
@@ -163,6 +169,7 @@ begintemplate SimIL1b
         graphTGFb.exec_menu("View = plot")
         graphTNFa.exec_menu("View = plot")
         plotShapeLPS.exec_menu("View = plot")
+        plotShapeIL1bTotal.exec_menu("View = plot")
         
         // Write data to file: time, LPS, Pro-IL1b, Mature IL1b, Inflammasome, IL10, TGFb, TNFa
         fileIL1bResults.printf("%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\n", t, dendrite_ref.o(0).sec.lps_stim_IL1b(0.5), dendrite_ref.o(0).sec.il1b_pro_IL1b(0.5), dendrite_ref.o(0).sec.il1b_mature_IL1b(0.5), dendrite_ref.o(0).sec.inflammasome_active_IL1b(0.5), dendrite_ref.o(0).sec.il10_conc_IL1b(0.5), dendrite_ref.o(0).sec.tgfb_conc_IL1b(0.5), dendrite_ref.o(0).sec.tnfa_conc_IL1b(0.5))
@@ -195,6 +202,7 @@ begintemplate SimIL1b
         removeItemFromList(fast_flush_list, plotShapeLPS)
         removeItemFromList(fast_flush_list, plotShapeVoltage)
         removeItemFromList(fast_flush_list, plotShapeIL1b)
+        removeItemFromList(fast_flush_list, plotShapeIL1bTotal)
         
         unmapIfNotNil(vBoxIL1bMain)
         unmapIfNotNil(vBoxGraphSEClamp)
@@ -209,6 +217,7 @@ begintemplate SimIL1b
         unmapIfNotNil(vBoxPlotShapeVoltage)
         unmapIfNotNil(vBoxPlotShapeLPS)
         unmapIfNotNil(vBoxPlotShapeIL1b)
+        unmapIfNotNil(vBoxPlotShapeIL1bTotal)
         
         seClampHelper.removeClamp()
     }
@@ -489,6 +498,24 @@ begintemplate SimIL1b
         }
         vBoxPlotShapeIL1b.intercept(0)
         vBoxPlotShapeIL1b.map("Mature IL1b Concentration", 2000, 102, 380, 380)
+        
+        // NEW: Total IL1b concentration plot (pro + mature)
+        vBoxPlotShapeIL1bTotal = new VBox()
+        vBoxPlotShapeIL1bTotal.intercept(1)
+        {
+            plotShapeIL1bTotal = new PlotShape(0)
+            fast_flush_list.append(plotShapeIL1bTotal)
+            plotShapeIL1bTotal.size(-50,50,-50,50)
+            plotShapeIL1bTotal.view(-50, -49.9003, 100, 100, 2390, 102, 380, 380)
+            plotShapeIL1bTotal.exec_menu("Shape Plot")
+            plotShapeIL1bTotal.exec_menu("View = plot")
+            plotShapeIL1bTotal.variable("il1b_conc_IL1b")
+            plotShapeIL1bTotal.label(0.15, 0.99, "Total IL1b (pg/ml)", 2, 1, 0, 1, 1)
+            plotShapeIL1bTotal.show(0)
+            plotShapeIL1bTotal.scale(0,20)
+        }
+        vBoxPlotShapeIL1bTotal.intercept(0)
+        vBoxPlotShapeIL1bTotal.map("Total IL1b Concentration", 2090, 102, 380, 380)
     }
     
 endtemplate SimIL1b
