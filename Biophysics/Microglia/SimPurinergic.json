@@ -1,0 +1,106 @@
+{
+    "Soma": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 1.0
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 0.0001,
+                "e_pas (mV)": -70.0
+            }
+        },
+        "ca_ion": {},
+        "na_ion": {},
+        "k_ion": {},
+        "P2X7": {
+            "PARAMETER": {
+                "gmax_P2X7 (S/cm2)": 0.0001,
+                "EC50_P2X7 (mM)": 0.3
+            }
+        },
+        "P2Y12": {
+            "PARAMETER": {
+                "EC50_P2Y12 (mM)": 0.001
+            }
+        },
+        "Kv13": {
+            "PARAMETER": {
+                "gkbar_Kv13 (S/cm2)": 0.001
+            }
+        }
+    },
+    "Dendrites": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 1.0
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 0.0001,
+                "e_pas (mV)": -70.0
+            }
+        },
+        "ca_ion": {},
+        "na_ion": {},
+        "k_ion": {},
+        "P2X7": {
+            "PARAMETER": {
+                "gmax_P2X7 (S/cm2)": 0.00005,
+                "EC50_P2X7 (mM)": 0.3
+            }
+        },
+        "P2Y12": {
+            "PARAMETER": {
+                "EC50_P2Y12 (mM)": 0.001
+            }
+        }
+    },
+    "Secondary Branch": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 1.0
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "e_pas (mV)": -70.0
+            }
+        },
+        "P2Y12": {
+            "PARAMETER": {
+                "EC50_P2Y12 (mM)": 0.001
+            }
+        }
+    },
+    "Primary Process": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 1.0
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": {
+                    "inhom_model": {
+                        "GPassive (S/cm2)": 0.0001
+                    }
+                },
+                "e_pas (mV)": -70.0
+            }
+        },
+        "ca_ion": {},
+        "P2X7": {
+            "PARAMETER": {
+                "gmax_P2X7 (S/cm2)": 0.00003
+            }
+        },
+        "P2Y12": {
+            "PARAMETER": {
+                "EC50_P2Y12 (mM)": 0.001
+            }
+        }
+    }
+}

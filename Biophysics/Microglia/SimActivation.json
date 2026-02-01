@@ -1,0 +1,105 @@
+{
+    "Soma": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 1.0
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 0.0001,
+                "e_pas (mV)": -70.0
+            }
+        },
+        "MG_activation": {
+            "PARAMETER": {
+                "tau_activation_MG_activation (ms)": 60000,
+                "tau_resolution_MG_activation (ms)": 300000
+            }
+        },
+        "k_ion": {},
+        "Kv13": {
+            "PARAMETER": {
+                "gkbar_Kv13 (S/cm2)": 0.001
+            }
+        },
+        "THIK1": {
+            "PARAMETER": {
+                "gkbar_THIK1 (S/cm2)": 0.0005
+            }
+        },
+        "ca_ion": {},
+        "P2X7": {
+            "PARAMETER": {
+                "gmax_P2X7 (S/cm2)": 0.0001
+            }
+        }
+    },
+    "Dendrites": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 1.0
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 0.0001,
+                "e_pas (mV)": -70.0
+            }
+        },
+        "MG_activation": {},
+        "k_ion": {},
+        "Kv13": {
+            "PARAMETER": {
+                "gkbar_Kv13 (S/cm2)": 0.0005
+            }
+        },
+        "THIK1": {
+            "PARAMETER": {
+                "gkbar_THIK1 (S/cm2)": 0.0005
+            }
+        }
+    },
+    "Secondary Branch": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 1.0
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "e_pas (mV)": -70.0
+            }
+        },
+        "MG_activation": {},
+        "THIK1": {
+            "PARAMETER": {
+                "gkbar_THIK1 (S/cm2)": 0.0003
+            }
+        }
+    },
+    "Primary Process": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 1.0
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": {
+                    "inhom_model": {
+                        "GPassive (S/cm2)": 0.0001
+                    }
+                },
+                "e_pas (mV)": -70.0
+            }
+        },
+        "MG_activation": {},
+        "k_ion": {},
+        "THIK1": {
+            "PARAMETER": {
+                "gkbar_THIK1 (S/cm2)": 0.0005
+            }
+        }
+    }
+}

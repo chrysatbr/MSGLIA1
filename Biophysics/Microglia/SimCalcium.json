@@ -1,0 +1,98 @@
+{
+    "Soma": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 1.0
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 0.0001,
+                "e_pas (mV)": -70.0
+            }
+        },
+        "ca_ion": {
+            "PARAMETER": {
+                "cai0_ca_ion (mM)": 0.0001,
+                "cao0_ca_ion (mM)": 2.0
+            }
+        },
+        "cadifus": {},
+        "P2X7": {
+            "PARAMETER": {
+                "gmax_P2X7 (S/cm2)": 0.0001
+            }
+        }
+    },
+    "Dendrites": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 1.0
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 0.0001,
+                "e_pas (mV)": -70.0
+            }
+        },
+        "ca_ion": {
+            "PARAMETER": {
+                "cai0_ca_ion (mM)": 0.0001,
+                "cao0_ca_ion (mM)": 2.0
+            }
+        },
+        "cadifus": {},
+        "P2X7": {
+            "PARAMETER": {
+                "gmax_P2X7 (S/cm2)": 0.00005
+            }
+        }
+    },
+    "Secondary Branch": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 1.0
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "e_pas (mV)": -70.0
+            }
+        },
+        "ca_ion": {
+            "PARAMETER": {
+                "cai0_ca_ion (mM)": 0.0001
+            }
+        },
+        "cadifus": {}
+    },
+    "Primary Process": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 1.0
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": {
+                    "inhom_model": {
+                        "GPassive (S/cm2)": 0.0001
+                    }
+                },
+                "e_pas (mV)": -70.0
+            }
+        },
+        "ca_ion": {
+            "PARAMETER": {
+                "cai0_ca_ion (mM)": 0.0001
+            }
+        },
+        "cadifus": {},
+        "P2X7": {
+            "PARAMETER": {
+                "gmax_P2X7 (S/cm2)": 0.00003
+            }
+        }
+    }
+}
