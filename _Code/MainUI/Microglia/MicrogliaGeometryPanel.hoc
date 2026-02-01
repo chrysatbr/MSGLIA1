@@ -1,0 +1,67 @@
+
+objref deckEditProcessOrBranchGeometry
+
+proc createMicrogliaGeometryPanel() { local isEditProcessOrBranchGeometryByDefault
+
+    isEditProcessOrBranchGeometryByDefault = 1
+    
+    xpanel("")
+    xlabel("============= Primary Process and Secondary Branch Geometry =============")
+    xradiobutton("Edit Secondary Branch geometry", "deckEditProcessOrBranchGeometry.flip_to(0)", isEditProcessOrBranchGeometryByDefault == 0)
+    xradiobutton("Edit Primary Process geometry", "deckEditProcessOrBranchGeometry.flip_to(1)", isEditProcessOrBranchGeometryByDefault == 1)
+    xpanel()
+    
+    deckEditProcessOrBranchGeometry = new Deck()
+    deckEditProcessOrBranchGeometry.intercept(1)
+    {
+        xpanel("")
+        xlabel("==================== Secondary Branch Geometry ====================")
+        xlabel("Secondary branches are fine processes that")
+        xlabel("connect to primary processes")
+        xlabel("-------------------------------------------------------------------------------------------------------------------------")
+        if (nanoDistrLoaded == 1) {
+            xradiobutton("Diameter distribution from file", "distrSelectedBranches(1)", 1)
+            xradiobutton("Stochastic uniform  distribution of diameters between Min and Max", "distrSelectedBranches(0)")
+        } else {
+            xlabel("Stochastic uniform distribution of diameters between Min and Max")
+        }
+        xvalue("Max diameter of Branches", "MaxDimBranch", 1, "distrSelectedBranches()", 0, 1)
+        xvalue("Min diameter of Branches", "MinDimBranch", 1, "distrSelectedBranches()", 0, 1)
+        xlabel("-------------------------------------------------------------------------------------------------------------------------")
+        xlabel("Stochastic uniform distribution of lengths between Min and Max")
+        xvalue("Max length of Branches", "MaxLenBranch", 1, "distrSelectedBranches()", 0, 1)
+        xvalue("Min length of Branches", "MinLenBranch", 1, "distrSelectedBranches()", 0, 1)
+        xpanel()
+        
+        xpanel("")
+        xlabel("==================== Primary Process Geometry =====================")
+        xlabel("Main processes extending from dendrites/soma")
+        xlabel("")
+        xlabel("-------------------------------------------------------------------------------------------------------------------------")
+        if (nanoDistrLoaded == 1) {
+            xradiobutton("Diameter distribution from file", "distrSelectedProcesses(0, 1)", 1)
+            xradiobutton("Stochastic uniform distribution of diameters between  Min and Max", "distrSelectedProcesses(0, 0)")
+        } else {
+            xlabel("Stochastic uniform distribution of diameters between Min and Max")
+        }
+        xvalue("Max diameter of Processes","MaxDimProcess", 1, "distrSelectedProcesses(0)", 0, 1)
+        xvalue("Min diameter of Processes","MinDimProcess", 1, "distrSelectedProcesses(0)", 0, 1)
+        xlabel("-------------------------------------------------------------------------------------------------------------------------")
+        xlabel("Stochastic uniform distribution of lengths between Min and Max")
+        xvalue("Max length of Processes","MaxLenProcess", 1, "distrSelectedProcesses(0)", 0, 1)
+        xvalue("Min length of Processes","MinLenProcess", 1, "distrSelectedProcesses(0)", 0, 1)
+        xpanel()
+    }
+    deckEditProcessOrBranchGeometry.intercept(0)
+    deckEditProcessOrBranchGeometry.flip_to(isEditProcessOrBranchGeometryByDefault)
+    deckEditProcessOrBranchGeometry.map()
+    
+    xpanel("")
+    xlabel("========== Specific membrane conductance =======================")
+    xlabel("This membrane conductivity is scaled to base of process cylinders")
+    xvalue("Specific membrane conductance, Gm","GPassive_mg", 1, "distrSelectedProcesses(1)", 0, 1)
+    xpanel()
+    
+}
+
+print "MicrogliaGeometryPanel.hoc loaded successfully"

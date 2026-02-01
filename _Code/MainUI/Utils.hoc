@@ -5,13 +5,26 @@ proc initVoltage() {
     }
     
     if (isBaseOrNanoStart) {
-        if (isAstrocyteOrNeuron) {
+        if (isGlialCell()) {
             v_init = -85    // mV
         } else {
             v_init = -64.65
         }
     }
     finitialize(v_init)
+}
+
+// Generic glial cell nano branch reseeding
+// Calls the appropriate reseed function based on cell type
+proc reseedGlialNanoBranches() {
+    if (isAstrocyte()) {
+        reseedAstrocyteNanoBranches()
+    } else if (isMicroglia()) {
+        reseedMicrogliaNanoBranches()
+    } else {
+        // For oligodendrocyte or unknown glial types, use astrocyte function for now
+        reseedAstrocyteNanoBranches()
+    }
 }
 
 proc initVoltageAndRunControlParams() {
@@ -23,7 +36,7 @@ proc initVoltageAndRunControlParams() {
     
     if (isBaseOrNanoStart) {
         dt = 1  // ms
-        if (isAstrocyteOrNeuron) {
+        if (isGlialCell()) {
             tstop = 10000
             steps_per_ms = 1
         } else {
@@ -33,7 +46,7 @@ proc initVoltageAndRunControlParams() {
         setdt()     // Letting NEURON change "dt" now rather than on start of the simulation
     }
     
-    if (!isAstrocyteOrNeuron) {
+    if (isNeuron()) {
         runStopAt = 5
         runStopIn = 1
         screen_update_invl = 0.05

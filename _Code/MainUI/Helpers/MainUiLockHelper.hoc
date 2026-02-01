@@ -5,6 +5,7 @@ begintemplate MainUiLockHelper
     public deckNanoReseeding, deckNanoGeomAndBiophys
     
     external isAstrocyteOrNeuron, isBaseOrNanoStart
+    external isGlialCell, isAstrocyte, isMicroglia, isNeuron
     external findItemInListByString, dismissIfNotNil, codeContractViolation
     external mmAllComps, spmAllSpineSets
     external compUtils
@@ -39,7 +40,7 @@ begintemplate MainUiLockHelper
         if (!isBaseOrNanoStart) {
             return
         }
-        if (isAstrocyteOrNeuron) {
+        if (isGlialCell()) {
             dismissIfNotNil(sdsWidget, 0)
             dismissIfNotNil(seedingDensityWidget)
         } else {

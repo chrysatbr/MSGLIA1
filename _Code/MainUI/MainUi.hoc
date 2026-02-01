@@ -1,16 +1,19 @@
 
 if (isBaseOrNanoStart) {
-    if (isAstrocyteOrNeuron) {
+    if (isAstrocyte()) {
         load_file("Astrocyte/AstrocyteGeometryPanel.hoc")
         load_file("Astrocyte/AstrocyteHandlers.hoc")
-    } else {
+    } else if (isMicroglia()) {
+        load_file("Microglia/MicrogliaGeometryPanel.hoc")
+        load_file("Microglia/MicrogliaHandlers.hoc")
+    } else if (isNeuron()) {
         load_file("Neuron/NeuronGeometryPanel.hoc")
     }
 }
 { load_file("../Managers/CommonLoads.hoc") }
 { load_file("../Managers/MechManager/MechManager.hoc") }
 { load_file("../Managers/GapJuncManager/GapJuncManager.hoc") }
-if (!isAstrocyteOrNeuron) {
+if (isNeuron()) {
     load_file("../Managers/SynManager/SynManager.hoc")
 }
 { load_file("../Extracellular/OutsideInDiffusion/ExtracellularManager.hoc") }
@@ -55,7 +58,7 @@ proc showMainUi() { local minV1, minV2, maxV localobj vBox, plotShapeMainV, grap
                 
                 createNanoGeomAndBiophysDeck()
                 
-                if (isAstrocyteOrNeuron) {
+                if (isGlialCell()) {
                     // !! do we need to show this for neuron as well?
                     // !! need to hide it once user performs any comp op in Manager of Biophysics
                     xpanel("")
@@ -111,7 +114,7 @@ proc showMainUi() { local minV1, minV2, maxV localobj vBox, plotShapeMainV, grap
             plotShapeMainV.variable("v")
             graphUtils.addPlotDynamicsMenuItem(plotShapeMainV, graphUtils.slotIdxs[0], "Voltage", "v", 1)
             plotShapeMainV.show(0)
-            if (isAstrocyteOrNeuron) {
+            if (isGlialCell()) {
                 minV1 = -85
                 minV2 = -90
                 maxV = -80
@@ -140,7 +143,7 @@ proc showMainUi() { local minV1, minV2, maxV localobj vBox, plotShapeMainV, grap
             xpanel("")
             xbutton("Edit biophysics", "startMechManager()")
             xbutton("Edit gap junctions", "startGapJuncManager()")
-            if (!isAstrocyteOrNeuron) {
+            if (isNeuron()) {
                 xbutton("Edit synapses", "startSynManager()")
             }
             xpanel()
@@ -159,7 +162,7 @@ proc showMainUi() { local minV1, minV2, maxV localobj vBox, plotShapeMainV, grap
             hBox.map()
             xpanel("")
             xstatebutton("Inside-out diffusion", &mainUiDiffIndicHelper.btnLEDs[1], "startIODManager()")
-            if (isBaseOrNanoStart && !isAstrocyteOrNeuron) {
+            if (isBaseOrNanoStart && isNeuron()) {
                 xlabel("")
                 xbutton("Insert electrode", "insertElectrode()")
             }
@@ -185,14 +188,18 @@ proc createNanoReseedingDeck() { localobj deckNanoReseeding
     {
         xpanel("")
         xlabel("============ Where to Seed the Nanostructures =============")
-        if (isAstrocyteOrNeuron) {
+        if (isGlialCell()) {
             // !! code dup. with SpineSeedingSubWidget and GapJuncManagerMainWidget
             xradiobutton("All dendrites", "isAllOrSomeDendritesSeeded = 1", isAllOrSomeDendritesSeeded == 1)
             xradiobutton("Some dendrites (I will select them)", "isAllOrSomeDendritesSeeded = 0", isAllOrSomeDendritesSeeded == 0)
             xbutton("Reseed", "reseedStalksHandler_deprecated()")
             xlabel("")
             // !! dup. with initAstrocyte.hoc
-            xpvalue("Max number of stalks per dendrite", &nanoBranchesManager.maxNumBranchesPerDend, 1, "reseedAstrocyteNanoBranches()")
+            if (isMicroglia()) {
+                xpvalue("Max number of processes per dendrite", &nanoBranchesManager.maxNumBranchesPerDend, 1, "reseedGlialNanoBranches()")
+            } else {
+                xpvalue("Max number of stalks per dendrite", &nanoBranchesManager.maxNumBranchesPerDend, 1, "reseedGlialNanoBranches()")
+            }
             // !! commented just because it's not about "Where to Seed the Nanostructures"
             // xpvalue("Number of leaves per stalk", &NumberLeavesPerStalk, 1, "reseedAstrocyteNanoBranches()")
             xbutton("Edit Min distribution over branches", "_showSeedingDensityWidget()")
@@ -205,15 +212,15 @@ proc createNanoReseedingDeck() { localobj deckNanoReseeding
         xlabel("============ Where to Seed the Nanostructures =============")
         xlabel("")
         xlabel("Not available after the first interaction with any of these widgets:")
-        xlabel("    * Manager of Biophysics")
-        xlabel("    * Manager of Gap Junctions")
-        if (!isAstrocyteOrNeuron) {
-            xlabel("    * Manager of Synapses")
+        xlabel("Manager of Biophysics")
+        xlabel("Manager of Gap Junctions")
+        if (isNeuron()) {
+            xlabel("Manager of Synapses")
         }
-        xlabel("    * Manager of Outside-In Diffusion")
-        xlabel("    * Manager of Inside-Out Diffusion")
-        xlabel("    * Manager of Export")
-        xlabel("    * any Simulation widget")
+        xlabel("Manager of Outside-In Diffusion")
+        xlabel("Manager of Inside-Out Diffusion")
+        xlabel("Manager of Export")
+        xlabel("any Simulation widget")
         xpanel()
     }
     deckNanoReseeding.intercept(0)
@@ -223,7 +230,7 @@ proc createNanoReseedingDeck() { localobj deckNanoReseeding
 
 proc createNanoGeomAndBiophysDeck() { local w, h localobj deckNanoGeomAndBiophys, vBox
     
-    if (isAstrocyteOrNeuron) {
+    if (isGlialCell()) {
         w = 350
     } else {
         w = 300
@@ -237,8 +244,10 @@ proc createNanoGeomAndBiophysDeck() { local w, h localobj deckNanoGeomAndBiophys
         vBox = new VBox()
         vBox.intercept(1)
         {
-            if (isAstrocyteOrNeuron) {
+            if (isAstrocyte()) {
                 createAstrocyteGeometryPanel()
+            } else if (isMicroglia()) {
+                createMicrogliaGeometryPanel()
             } else {
                 createNeuronGeometryPanel()
             }
@@ -246,8 +255,12 @@ proc createNanoGeomAndBiophysDeck() { local w, h localobj deckNanoGeomAndBiophys
         vBox.intercept(0)
         vBox.map()
         xpanel("")
-        if (isAstrocyteOrNeuron) {
+        if (isAstrocyte()) {
             xlabel("==================== Stalk and Leaf Geometry ====================")
+            xlabel("")
+            xlabel("========== Specific membrane conductance =======================")
+        } else if (isMicroglia()) {
+            xlabel("============= Primary Process and Secondary Branch Geometry =============")
             xlabel("")
             xlabel("========== Specific membrane conductance =======================")
         } else {
@@ -260,7 +273,7 @@ proc createNanoGeomAndBiophysDeck() { local w, h localobj deckNanoGeomAndBiophys
         xlabel("    * Defining any mech variable as a func(dist)")
         xlabel("or this operation applied in Manager of Gap Junctions:")
         xlabel("    * Defining any PP variable / Ext GJ PP Ptr stub as a func(dist)")
-        if (!isAstrocyteOrNeuron) {
+        if (isNeuron()) {
             xlabel("or this operation applied in Manager of Synapses:")
             xlabel("    * Defining any PP / NetCon variable as a func(dist)")
         }

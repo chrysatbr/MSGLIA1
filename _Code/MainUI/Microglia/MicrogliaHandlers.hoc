@@ -1,0 +1,52 @@
+
+// 0 - Uniform distribution selected, 1 - Distribution from file selected
+// Diameter distribution of processes (like leaves)
+distrStatusLeaves = 0
+// Diameter distribution of branches (like stalks)
+distrStatusStalks = 0
+
+// change the volume of microglia
+DiameterParameter = 0
+LengthChange = 1
+proc changeVolume() { local j
+    forall {
+        for j = 0, n3d()-1 {
+            if (x3d(j) > 0.01 && y3d(j) > 0.01) {
+                pt3dchange(j, x3d(j)*$2, y3d(j)*$2, z3d(j)*$2, diam+diam*$1/100)
+            } else {
+                pt3dchange(j, x3d(j)*$2, y3d(j)*$2, z3d(j)*$2, diam+diam*$1/100)
+            }
+        }
+    }
+    DiameterParameter = 0
+    LengthChange = 1
+    $1 = 0
+    $2 = 1
+}
+
+// Change distribution of Processes (like Leaves)
+proc distrSelectedProcesses() { local numArg, isBiophysOnly
+    numArg = numarg()
+    if (numArg < 1 || numArg > 2) {
+        codeContractViolation()
+    }
+    isBiophysOnly = $1
+    if (numArg == 2) {
+        distrStatusLeaves = $2
+    }
+    setProcesses(isBiophysOnly, distrStatusLeaves)
+}
+
+// Change distribution of Branches (like Stalks)
+proc distrSelectedBranches() { local numArg
+    numArg = numarg()
+    if (numArg > 1) {
+        codeContractViolation()
+    }
+    if (numArg == 1) {
+        distrStatusStalks = $1
+    }
+    setBranches(distrStatusStalks)
+}
+
+print "MicrogliaHandlers.hoc loaded successfully"

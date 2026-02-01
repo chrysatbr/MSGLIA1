@@ -4,8 +4,11 @@ if (isBaseOrNanoStart) {
     load_file("CellInit.hoc")
     load_file("CellUpdate.hoc")
     // !! move to caller file
-    if (isAstrocyteOrNeuron) {
+    if (isAstrocyte()) {
         load_file("../NanoCore/Astrocyte/AstrocyteNanoInitUpdate.hoc")
+        objref nanoDistal_ref, nanoProximal_ref // !! just to source MechanismSwitch_deprecated.hoc without errors
+    } else if (isMicroglia()) {
+        load_file("../NanoCore/Microglia/MicrogliaNanoInitUpdate.hoc")
         objref nanoDistal_ref, nanoProximal_ref // !! just to source MechanismSwitch_deprecated.hoc without errors
     }
     load_file("InitParamsMain.hoc")
@@ -14,6 +17,10 @@ if (isBaseOrNanoStart) {
 { load_file("MainUi.hoc") }
 
 { load_file("GeometricalParameters.hoc") }
+
+// Restore the full-featured geomMath from InterModularGeomMath.hoc
+// (GeometricalParameters.hoc overrides it with a simpler version)
+geomMath = new GeometryMath()
 
 objref apc
 
