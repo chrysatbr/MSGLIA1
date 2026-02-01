@@ -39,7 +39,7 @@ func saveNanoHocFile() { local isCancel localobj bulletedList
     bulletedList = new List()
     str1 = "GLOBAL vars from biophys mechs%s"
     str2 = "custom PPs/ACs (if you add them); we export only %s as well as APCount-s"
-    if (isAstrocyteOrNeuron) {
+    if (isGlialCell()) {
         sprint(str1, str1, " and gap junc PPs")
         sprint(str2, str2, "PPs from gap juncs")
     } else {

@@ -5,7 +5,7 @@ begintemplate ExportManagerMainWidget
     
     external mwh, compUtils, inhomAndStochLibrary, ecsLibrary, mmIcrHelper
     external saveNanoHocFile, getExtracellularSourcesStatus, applyExtracellularSourcesWithWaitBoxAndUpdateMainUiDiffStatusIndication, disableExtracellularSourcesAndUpdateMainUiDiffStatusIndication, createEmptyPanel, openDeck, closeDeck, unmapIfNotNil
-    external isAstrocyteOrNeuron
+    external isAstrocyteOrNeuron, isAstrocyte, isMicroglia, isNeuron, isGlialCell
     external exportOptions
     external pyObj
     
@@ -76,7 +76,7 @@ begintemplate ExportManagerMainWidget
             numInhomVars = inhomAndStochLibrary.getNumInhomVarsForTaps(1, -1)
             numStochVars = inhomAndStochLibrary.getNumStochVarsForTaps(1, -1)
             deck2 = createGapJuncOrSynBlock("All gap junctions", &exportOptions.isExportGapJuncs, "gapJuncsCheckBoxHandler()", numInhomVars, numStochVars, &exportOptions.isExportGapJuncAssignedAndState, &exportOptions.isExportGapJuncInhoms, &exportOptions.isExportGapJuncStochs)
-            if (!isAstrocyteOrNeuron) {
+            if (isNeuron()) {
                 numInhomVars = inhomAndStochLibrary.getNumInhomVarsForTaps(0, -1)
                 numStochVars = inhomAndStochLibrary.getNumStochVarsForTaps(0, -1)
                 deck3 = createGapJuncOrSynBlock("All synapses", &exportOptions.isExportSyns, "synsCheckBoxHandler()", numInhomVars, numStochVars, &exportOptions.isExportSynAssignedAndState, &exportOptions.isExportSynInhoms, &exportOptions.isExportSynStochs)

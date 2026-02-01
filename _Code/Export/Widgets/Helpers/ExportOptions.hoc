@@ -21,7 +21,7 @@ begintemplate ExportOptions
     public isAnyCustomSweptVars, isAnyWatchedAPCounts
     
     external cvode
-    external isAstrocyteOrNeuron, soma_ref
+    external isAstrocyteOrNeuron, isAstrocyte, isMicroglia, isNeuron, isGlialCell, soma_ref
     external inhomAndStochLibrary, ecsLibrary
     external pyObj, gjmAllGapJuncSets, smAllSynSets
     external stringEmpty, codeContractViolation
@@ -71,10 +71,10 @@ begintemplate ExportOptions
         isExportGapJuncAssignedAndState = 0
         isExportGapJuncInhoms = 1
         isExportGapJuncStochs = 1
-        isExportSyns = !isAstrocyteOrNeuron
+        isExportSyns = isNeuron()
         isExportSynAssignedAndState = 0
-        isExportSynInhoms = !isAstrocyteOrNeuron
-        isExportSynStochs = !isAstrocyteOrNeuron
+        isExportSynInhoms = isNeuron()
+        isExportSynStochs = isNeuron()
         // isExportECSs = 0     // The default value will be chosen each time user opens the widget
         isCreateParamsHoc = 0
         isExposeModelVars = 0
@@ -176,7 +176,7 @@ begintemplate ExportOptions
     
     func isExportAnyTapSets() { local res
         res = isExportAnyGapJuncSets()
-        if (!isAstrocyteOrNeuron) {
+        if (isNeuron()) {
             res = res || isExportAnySynSets()
         }
         return res
@@ -240,7 +240,7 @@ begintemplate ExportOptions
     
     func isExportAnyInhomTapModels() { local res
         res = isExportAnyInhomGapJuncModels()
-        if (!isAstrocyteOrNeuron) {
+        if (isNeuron()) {
             res = res || isExportAnyInhomSynModels()
         }
         return res
@@ -269,7 +269,7 @@ begintemplate ExportOptions
         if (isExportAnyStochFuncs()) {
             return 1
         }
-        if (isAstrocyteOrNeuron || !isExportSyns) {
+        if (isGlialCell() || !isExportSyns) {
             return 0
         }
         for synSetIdx = 0, smAllSynSets.count() - 1 {   // Don't replace with "eachItemInList" because we return

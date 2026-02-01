@@ -6,7 +6,7 @@ begintemplate RepeatForStatsWidget
     external exportOptions
     external math, mwh
     external unmapIfNotNil
-    external isAstrocyteOrNeuron
+    external isAstrocyteOrNeuron, isAstrocyte, isMicroglia, isNeuron, isGlialCell
     
     objref mainBox
     
@@ -46,7 +46,7 @@ begintemplate RepeatForStatsWidget
         if (!exportOptions.isExportAltRunControl()) {
             line1 = "There won't be any stoch vars%s in the exported HOC file,"
             line2 = "so changing RNG seeds between the repetitions won't have any effect."
-            if (!isAstrocyteOrNeuron) {
+            if (isNeuron()) {
                 sprint(line1, line1, " or release probability mechanics")
             } else {
                 sprint(line1, line1, "")

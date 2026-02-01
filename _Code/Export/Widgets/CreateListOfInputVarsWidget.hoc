@@ -6,7 +6,7 @@ begintemplate CreateListOfInputVarsWidget
     
     external exportOptions
     external enterVarExpression, isVarExprUnique, replaceItemInList, deleteSelectedItemFromBrowsedList, openDeck, closeDeck, addEmptyLabels, unmapIfNotNil, codeContractViolation
-    external isAstrocyteOrNeuron
+    external isAstrocyteOrNeuron, isAstrocyte, isMicroglia, isNeuron, isGlialCell
     
     objref mainBox, exprsList
     objref aoivWidgets[1], dg4ivWidget
@@ -84,19 +84,19 @@ begintemplate CreateListOfInputVarsWidget
                     xpanel("")
                     xbutton("Add biophys var", "addBioGjOrSynVar(0)")
                     xbutton("Add gap junc var", "addBioGjOrSynVar(1)")
-                    if (!isAstrocyteOrNeuron) {
+                    if (isNeuron()) {
                         xbutton("Add synapse var", "addBioGjOrSynVar(2)")
                     }
                     xbutton("Add custom var", "addCustomVarHandler()")
                     xlabel("")
                     xbutton("Correct var", "correctVarHandler()")
                     if (!isExposedOrSwept) {
-                        if (isAstrocyteOrNeuron) {
+                        if (isGlialCell()) {
                             xlabel("")
                         }
                         xbutton("Define var grid", "defineVarGridHandler()")
                     }
-                    numSpacers = isAstrocyteOrNeuron + 2 * isExposedOrSwept
+                    numSpacers = isGlialCell() + 2 * isExposedOrSwept
                     addEmptyLabels(numSpacers)
                     xbutton("Delete var", "deleteVarHandler()")
                     xpanel()
