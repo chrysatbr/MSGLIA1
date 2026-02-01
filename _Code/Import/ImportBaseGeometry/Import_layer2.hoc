@@ -43,7 +43,7 @@ proc importHocFile_layer2() { local isCalledAfterConversion, isSomaInsertedDurin
         namesOfTopoRootsInSoma = getNamesOfAllTopologicalRoots(usedNamesForSoma)
     }
     
-    isAxonMissingAndRequired = !isAstrocyteOrNeuron && (usedNamesForAxon.count() == 0)
+    isAxonMissingAndRequired = isNeuron() && (usedNamesForAxon.count() == 0)
     
     if (isAxonMissingAndRequired) {
         // Insert default axon

@@ -38,7 +38,7 @@ proc importSwcOrOtherFile_layer1() { local isSomaMissing, isDendriteMissing, isA
     // also, insert a default soma if missing
     convertFileToHocWithNLMorphologyConverter(inFilePathName, somaDiamAndLenOrMinusOne, hocFilePathName)
     
-    isAxonMissingAndRequired = !isAstrocyteOrNeuron && isAxonMissing
+    isAxonMissingAndRequired = isNeuron() && isAxonMissing
     
     importHocFile_layer1(hocFilePathName, 1, isSomaMissing, isAxonMissingAndRequired, isSomaPresentButHasOnly1Point)
 }
@@ -107,16 +107,16 @@ proc importHocFile_layer1() { local isCalledAfterConversion, isSomaInsertedDurin
                 // The "OK" button handler will call "importHocFile_layer2"
                 return
             } else {
-                if (defaultSomaNameIdxs.size() != 1 || defaultDendriteNameIdxs.size() != 1 || (!isAstrocyteOrNeuron && defaultAxonNameIdxs.size() != 1)) {
+                if (defaultSomaNameIdxs.size() != 1 || defaultDendriteNameIdxs.size() != 1 || (isNeuron() && defaultAxonNameIdxs.size() != 1)) {
                     codeContractViolation()
                 }
-                if (isAstrocyteOrNeuron && defaultAxonNameIdxs.size() != 0) {
+                if (isGlialCell() && defaultAxonNameIdxs.size() != 0) {
                     codeContractViolation()
                 }
                 
                 usedNamesForSoma.append(allNames.o(defaultSomaNameIdxs.x[0]))
                 usedNamesForDendrites.append(allNames.o(defaultDendriteNameIdxs.x[0]))
-                if (!isAstrocyteOrNeuron) {
+                if (isNeuron()) {
                     usedNamesForAxon.append(allNames.o(defaultAxonNameIdxs.x[0]))
                 }
             }
@@ -124,7 +124,7 @@ proc importHocFile_layer1() { local isCalledAfterConversion, isSomaInsertedDurin
             // Standard names declared by NLMorphologyConverter in the output HOC file
             usedNamesForSoma.append(new String("soma"))
             usedNamesForDendrites.append(new String("dendrite"))
-            if (!isAstrocyteOrNeuron && isAxonMissingAndRequiredOrMinusOne == 0) {
+            if (isNeuron() && isAxonMissingAndRequiredOrMinusOne == 0) {
                 usedNamesForAxon.append(new String("axon"))
             }
         }

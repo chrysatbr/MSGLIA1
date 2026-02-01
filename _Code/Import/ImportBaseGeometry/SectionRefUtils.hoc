@@ -31,7 +31,7 @@ obfunc createReferencesToTheseNames() { local idx localobj usedNames, list_ref
 // Create references to soma, dendrite and (for neuron only) axon sections imported from HOC file or created by the importer
 // $o1 - Imported/created soma names (List of String-s)
 // $o2 - Imported dendrite names (List of String-s)
-// $o3 (optional) - Imported/created axon names (List of String-s); used only if !isAstrocyteOrNeuron
+// $o3 (optional) - Imported/created axon names (List of String-s); used only if isNeuron()
 // Other input: isAstrocyteOrNeuron (taken from the top level)
 // Output: soma_ref, dendrite_ref and (for neuron only) axon_ref (all initialized on the top level, List-s of SectionRef-s)
 proc createCompartmentReferences() { local numArg localobj usedNamesForSoma, usedNamesForDendrites, usedNamesForAxon, nil
@@ -46,7 +46,7 @@ proc createCompartmentReferences() { local numArg localobj usedNamesForSoma, use
     // Initialize soma_ref, dendrite_ref and (for neuron only) axon_ref
     soma_ref = createReferencesToTheseNames(usedNamesForSoma)
     dendrite_ref = createReferencesToTheseNames(usedNamesForDendrites)
-    if (!isAstrocyteOrNeuron) {
+    if (isNeuron()) {
         axon_ref = createReferencesToTheseNames(usedNamesForAxon)
     } else {
         // !! it would be better not to declare it at all
@@ -59,7 +59,7 @@ proc createCompartmentReferences() { local numArg localobj usedNamesForSoma, use
 proc deleteAllSectionRefs() { localobj nil
     soma_ref = nil
     dendrite_ref = nil
-    if (!isAstrocyteOrNeuron) {
+    if (isNeuron()) {
         axon_ref = nil
     }
 }

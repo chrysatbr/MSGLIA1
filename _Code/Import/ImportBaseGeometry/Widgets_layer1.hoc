@@ -16,6 +16,7 @@ begintemplate CellularCompartmentsWidget
     objref somaSelectionFlags, dendriteSelectionFlags, axonSelectionFlags
     
     external isAstrocyteOrNeuron
+    external isAstrocyte, isMicroglia, isNeuron, isGlialCell
     external mwh
     external importHocFile_layer2, printMsgAndRaiseError
     
@@ -105,12 +106,12 @@ begintemplate CellularCompartmentsWidget
             numNames = allNames.count()
             somaSelectionFlags = new Vector(numNames)       // All 0 by default
             dendriteSelectionFlags = new Vector(numNames)   //
-            if (!isAstrocyteOrNeuron) {
+            if (isNeuron()) {
                 axonSelectionFlags = new Vector(numNames)   //
             }
             setOnesForDefaultNames(somaSelectionFlags, defaultSomaNameIdxs)
             setOnesForDefaultNames(dendriteSelectionFlags, defaultDendriteNameIdxs)
-            if (!isAstrocyteOrNeuron) {
+            if (isNeuron()) {
                 setOnesForDefaultNames(axonSelectionFlags, defaultAxonNameIdxs)
             }
             
@@ -119,7 +120,7 @@ begintemplate CellularCompartmentsWidget
             {
                 // !! do not show soma and/or axon panels if importer creates them itself
                 xpanel("")
-                if (isAstrocyteOrNeuron) {
+                if (isGlialCell()) {
                     whatElse = " and dendrites"
                 } else {
                     whatElse = ", dendrites and axon"
@@ -127,7 +128,7 @@ begintemplate CellularCompartmentsWidget
                 sprint(str, "Please help us identify which names were used in the HOC file to define soma%s", whatElse)
                 xlabel(str)
                 xlabel("so we can simulate the cell correctly.")
-                if (isAstrocyteOrNeuron) {
+                if (isGlialCell()) {
                     str = "Uncheck all names on the left panel if the file does not define soma."
                 } else {
                     str = "Uncheck all names on the left and/or right panel if the file does not define soma and/or axon."
@@ -139,7 +140,7 @@ begintemplate CellularCompartmentsWidget
                 {
                     createAndInitOnePanel("Soma", 0, somaSelectionFlags)
                     createAndInitOnePanel("Dendrite", 1, dendriteSelectionFlags)
-                    if (!isAstrocyteOrNeuron) {
+                    if (isNeuron()) {
                         createAndInitOnePanel("Axon", 2, axonSelectionFlags)
                     }
                 }
@@ -154,7 +155,7 @@ begintemplate CellularCompartmentsWidget
         }
         // !! width change depending on whether we hide soma and/or axon panels
         width = 430
-        if (!isAstrocyteOrNeuron) {
+        if (isNeuron()) {
             width *= 3 / 2
         }
         mainBox.map("Cellular compartments", 350, 50, width, 500)
@@ -225,7 +226,7 @@ begintemplate CellularCompartmentsWidget
                 mwh.showWarningBox("Cannot use the same sections for soma and dendrites.", line2)
                 return
             }
-            if (!isAstrocyteOrNeuron) {
+            if (isNeuron()) {
                 if (dendriteSelectionFlags.x[idx] && axonSelectionFlags.x[idx]) {
                     mwh.showWarningBox("Cannot use the same sections for dendrites and axon.", line2)
                     return
@@ -253,7 +254,7 @@ begintemplate CellularCompartmentsWidget
                 usedNamesForSoma.append(allNames.o(idx))
             } else if (dendriteSelectionFlags.x[idx]) {
                 usedNamesForDendrites.append(allNames.o(idx))
-            } else if (!isAstrocyteOrNeuron) {      // Don't combine these two lines with && because NEURON evaluates all the operands
+            } else if (isNeuron()) {      // Don't combine these two lines with && because NEURON evaluates all the operands
                 if (axonSelectionFlags.x[idx]) {    //
                     usedNamesForAxon.append(allNames.o(idx))
                 }

@@ -69,7 +69,7 @@ func chooseDefaultSelectedNamesForCompartments() { local numNames, noGuessForSom
     
     searchCycle(allNamesLowerCase, dendriteStrongNameMarkersLowerCase, defaultDendriteNameIdxs, 1)
     
-    if (!isAstrocyteOrNeuron) {
+    if (isNeuron()) {
         // Reasonable names for axon
         axonStrongNameMarkersLowerCase = new List()
         axonStrongNameMarkersLowerCase.append(new String("axon"))
@@ -83,7 +83,7 @@ func chooseDefaultSelectedNamesForCompartments() { local numNames, noGuessForSom
     noGuessForDendrite = (defaultDendriteNameIdxs.size() == 0)
     noGuessForAxon = (defaultAxonNameIdxs.size() == 0)
     
-    if (isAstrocyteOrNeuron) {
+    if (isGlialCell()) {
         if (!noGuessForSoma && !noGuessForDendrite && numNames == 2) {
             // We are pretty confident about the default selections
             return 0
@@ -115,7 +115,7 @@ func chooseDefaultSelectedNamesForCompartments() { local numNames, noGuessForSom
         searchCycle(allNamesLowerCase, dendriteWeakNameMarkersLowerCase, defaultDendriteNameIdxs, 0)
     }
     
-    if (!isAstrocyteOrNeuron && noGuessForAxon) {
+    if (isNeuron() && noGuessForAxon) {
         // Other reasonable substrings for axon (sorted by weakness)
         axonWeakNameMarkersLowerCase = new List()
         axonWeakNameMarkersLowerCase.append(new String("ax"))

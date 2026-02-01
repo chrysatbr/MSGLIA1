@@ -15,6 +15,7 @@ begintemplate ImportCompleteWidget
     
     external pyObj
     external isAstrocyteOrNeuron, isExternalSimStart, mwh, ic, importCompleteHandler
+    external isNeuron, isAstrocyte, isMicroglia, isGlialCell
     external chooseOutLocationAndExportHocFile, hideImportedGeometry, cleanupBeforeNextImport, printMsgAndRaiseError, codeContractViolation
     
     // Show all warnings and/or modifiers and ask user whether to proceed with this file (optionally saving it as HOC somewhere) or import other one
@@ -154,7 +155,7 @@ begintemplate ImportCompleteWidget
     
         commonHandler()
         
-        if (!isAstrocyteOrNeuron) {
+        if (isNeuron()) {
             hideImportedGeometry()
         }
         
