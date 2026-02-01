@@ -4,16 +4,22 @@ begintemplate RoadmapWidget
     public show
     
     external isAstrocyteOrNeuron, isBaseOrNanoStart, isExternalSimStart
+    external cellType, microgliaType
+    external CELL_TYPE_ASTROCYTE, CELL_TYPE_MICROGLIA, CELL_TYPE_OLIGODENDROCYTE, CELL_TYPE_NEURON
+    external setCellType, updateIsAstrocyteOrNeuron
     external getBrainCellVersionStr
     external mwh
     external roadmapChosenHandler
     
-    objref mainBox, astrocyteOrNeuronDeck, hintDeck
+    objref mainBox, cellTypeDeck, hintDeck
     
     enumRoadmap = -1
+    selectedCellType = -1
     
     
     proc init() {
+        selectedCellType = CELL_TYPE_ASTROCYTE
+        cellType = CELL_TYPE_ASTROCYTE
         isAstrocyteOrNeuron = 1
         enumRoadmap = 0             //
         isBaseOrNanoStart = 1       // Keep these 3 in sync
@@ -34,24 +40,24 @@ begintemplate RoadmapWidget
             xlabel(text)
             xlabel("")
             xpanel()
-            astrocyteOrNeuronDeck = new Deck()
-            astrocyteOrNeuronDeck.intercept(1)
+            cellTypeDeck = new Deck()
+            cellTypeDeck.intercept(1)
             {
                 xpanel("")
                 xpanel()
                 xpanel("")
                 xlabel("Please choose a type of the cell that will be imported and simulated:")
                 xlabel("")
-                xradiobutton("Astrocyte", "isAstrocyteOrNeuron = 1", isAstrocyteOrNeuron)
-		xradiobutton("Microglia", "isAstrocyteOrNeuron = 1", isAstrocyteOrNeuron)
-		xradiobutton("Oligodendrocyte", "isAstrocyteOrNeuron = 1", isAstrocyteOrNeuron)
-                xradiobutton("Neuron", "isAstrocyteOrNeuron = 0", !isAstrocyteOrNeuron)
+                xradiobutton("Astrocyte", "cellTypeChangedHandler(1)", selectedCellType == CELL_TYPE_ASTROCYTE)
+                xradiobutton("Microglia", "cellTypeChangedHandler(2)", selectedCellType == CELL_TYPE_MICROGLIA)
+                xradiobutton("Oligodendrocyte", "cellTypeChangedHandler(3)", selectedCellType == CELL_TYPE_OLIGODENDROCYTE)
+                xradiobutton("Neuron", "cellTypeChangedHandler(4)", selectedCellType == CELL_TYPE_NEURON)
                 xlabel("")
                 xpanel()
             }
-            astrocyteOrNeuronDeck.intercept(0)
-            // astrocyteOrNeuronDeck.flip_to(*)     // Will be done below in roadmapChangedHandler
-            astrocyteOrNeuronDeck.map()
+            cellTypeDeck.intercept(0)
+            // cellTypeDeck.flip_to(*)     // Will be done below in roadmapChangedHandler
+            cellTypeDeck.map()
             hBox = new HBox()
             hBox.intercept(1)
             {
@@ -108,11 +114,26 @@ begintemplate RoadmapWidget
     // All next staff is private
     
     
+    // Handler for cell type radio button changes
+    proc cellTypeChangedHandler() {
+        selectedCellType = $1
+        
+        // Update the global cellType variable
+        cellType = selectedCellType
+        
+        // Update backward compatibility flag
+        if (selectedCellType == CELL_TYPE_NEURON) {
+            isAstrocyteOrNeuron = 0
+        } else {
+            isAstrocyteOrNeuron = 1
+        }
+    }
+    
     proc roadmapChangedHandler() {
         enumRoadmap = $1
         
         isBaseOrNanoStart = (enumRoadmap != 1)
-        astrocyteOrNeuronDeck.flip_to(isBaseOrNanoStart)
+        cellTypeDeck.flip_to(isBaseOrNanoStart)
         hintDeck.flip_to(enumRoadmap)
         isExternalSimStart = (enumRoadmap == 2)
     }
@@ -149,9 +170,15 @@ begintemplate RoadmapWidget
         
         if (!isBaseOrNanoStart) {
             isAstrocyteOrNeuron = -1
+            cellType = -1
         }
         
-        roadmapChosenHandler()
+        // If Microglia is selected, show the Microglia Type Selector
+        if (selectedCellType == CELL_TYPE_MICROGLIA && isBaseOrNanoStart) {
+            execute1("showMicrogliaTypeSelector()")
+        } else {
+            roadmapChosenHandler()
+        }
     }
     
     proc dismissHandler() {
@@ -160,4 +187,174 @@ begintemplate RoadmapWidget
 
 endtemplate RoadmapWidget
 
-objref roadmapWidget
+
+// ============================================================================
+// MICROGLIA TYPE SELECTOR WIDGET
+// ============================================================================
+
+begintemplate MicrogliaTypeSelector
+
+    public show
+    
+    external microgliaType
+    external MICROGLIA_TYPE_RAMIFIED, MICROGLIA_TYPE_HYPER_RAMIFIED
+    external MICROGLIA_TYPE_REACTIVE, MICROGLIA_TYPE_AMOEBOID
+    external setMicrogliaType
+    external roadmapChosenHandler
+    external mwh
+    
+    objref mainBox, infoDeck
+    
+    selectedType = -1
+    
+    proc init() {
+        selectedType = MICROGLIA_TYPE_RAMIFIED
+        microgliaType = MICROGLIA_TYPE_RAMIFIED
+    }
+    
+    proc show() {
+        mainBox = new VBox()
+        mainBox.intercept(1)
+        {
+            xpanel("")
+            xlabel("")
+            xlabel("================== Microglia Morphological State ==================")
+            xlabel("")
+            xlabel("Please select the activation state of the microglia:")
+            xlabel("(This determines the default morphological parameters)")
+            xlabel("")
+            xpanel()
+            
+            xpanel("")
+            xradiobutton("Ramified (Homeostatic/Surveillant)", "typeChangedHandler(1)", selectedType == MICROGLIA_TYPE_RAMIFIED)
+            xradiobutton("Hyper-ramified (Bushy/Pre-activated)", "typeChangedHandler(2)", selectedType == MICROGLIA_TYPE_HYPER_RAMIFIED)
+            xradiobutton("Reactive (Activated/Inflammatory)", "typeChangedHandler(3)", selectedType == MICROGLIA_TYPE_REACTIVE)
+            xradiobutton("Amoeboid (Fully activated/Phagocytic)", "typeChangedHandler(4)", selectedType == MICROGLIA_TYPE_AMOEBOID)
+            xlabel("")
+            xpanel()
+            
+            infoDeck = new Deck()
+            infoDeck.intercept(1)
+            {
+                // Ramified info panel
+                xpanel("")
+                xlabel("RAMIFIED MICROGLIA")
+                xlabel("─────────────────────────────────────────────")
+                xlabel("Found in healthy adult CNS")
+                xlabel("Small soma (5-8um), highly branched processes")
+                xlabel("5-7 primary processes, extensive secondary branching")
+                xlabel("Total skeleton length: 200-350um")
+                xlabel("Function: Continuous surveillance of CNS microenvironment")
+                xpanel()
+                
+                // Hyper-ramified info panel
+                xpanel("")
+                xlabel("HYPER-RAMIFIED MICROGLIA")
+                xlabel("─────────────────────────────────────────────")
+                xlabel("Observed in acute/chronic stress conditions")
+                xlabel("Slightly larger soma (6-10um)")
+                xlabel("Increased process length and branching complexity")
+                xlabel("Total skeleton length: 250-400um")
+                xlabel("Function: Enhanced surveillance, pre-inflammatory state")
+                xpanel()
+                
+                // Reactive info panel
+                xpanel("")
+                xlabel("REACTIVE MICROGLIA")
+                xlabel("─────────────────────────────────────────────")
+                xlabel("Present during neuroinflammation, injury response")
+                xlabel("Enlarged soma (10-15um), thicker processes")
+                xlabel("3-5 primary processes, reduced branching")
+                xlabel("Total skeleton length: 100-300um")
+                xlabel("Function: Cytokine production, debris phagocytosis")
+                xpanel()
+                
+                // Amoeboid info panel
+                xpanel("")
+                xlabel("AMOEBOID MICROGLIA")
+                xlabel("─────────────────────────────────────────────")
+                xlabel("Severe injury, neurodegeneration, early development")
+                xlabel("Large round soma (15-20um)")
+                xlabel("Minimal or no processes (0-2)")
+                xlabel("Total skeleton length: 0-50um")
+                xlabel("Function: Active migration, phagocytosis")
+                xpanel()
+            }
+            infoDeck.intercept(0)
+            infoDeck.flip_to(0)
+            infoDeck.map()
+            
+            xpanel("")
+            xlabel("")
+            xbutton("Show Detailed Parameters", "showParametersHandler()")
+            xbutton("Next", "nextHandler()")
+            xbutton("Back", "backHandler()")
+            xpanel()
+        }
+        mainBox.dismiss_action("dismissHandler()")
+        mainBox.intercept(0)
+        mainBox.map("Microglia Type Selection", 350, 180, -1, -1)
+    }
+    
+    proc typeChangedHandler() {
+        selectedType = $1
+        microgliaType = selectedType
+        infoDeck.flip_to(selectedType - 1)
+    }
+    
+    proc showParametersHandler() {
+        strdef title, msg1, msg2, msg3, msg4, msg5, msg6
+        
+        if (selectedType == MICROGLIA_TYPE_RAMIFIED) {
+            title = "Ramified Microglia Parameters"
+            msg1 = "Soma diameter: 5-8um"
+            msg2 = "Primary processes: 5-7"
+            msg3 = "Process diameter: 0.3-1.0um (tapering)"
+            msg4 = "Branch points: 15-40"
+            msg5 = "Terminal points: 20-50"
+            msg6 = "Fractal dimension: 1.4-1.6"
+        } else if (selectedType == MICROGLIA_TYPE_HYPER_RAMIFIED) {
+            title = "Hyper-ramified Microglia Parameters"
+            msg1 = "Soma diameter: 6-10um"
+            msg2 = "Primary processes: 6-8"
+            msg3 = "Process diameter: 0.4-1.2um (tapering)"
+            msg4 = "Branch points: 25-60"
+            msg5 = "Terminal points: 35-70"
+            msg6 = "Fractal dimension: 1.5-1.7"
+        } else if (selectedType == MICROGLIA_TYPE_REACTIVE) {
+            title = "Reactive Microglia Parameters"
+            msg1 = "Soma diameter: 10-15um"
+            msg2 = "Primary processes: 3-5"
+            msg3 = "Process diameter: 1.0-2.0um"
+            msg4 = "Branch points: 5-15"
+            msg5 = "Terminal points: 8-20"
+            msg6 = "Fractal dimension: 1.2-1.4"
+        } else {
+            title = "Amoeboid Microglia Parameters"
+            msg1 = "Soma diameter: 15-20um"
+            msg2 = "Primary processes: 0-2"
+            msg3 = "Process diameter: >2um"
+            msg4 = "Branch points: 0-3"
+            msg5 = "Terminal points: 0-5"
+            msg6 = "Fractal dimension: 1.0-1.1"
+        }
+        
+        mwh.showMessageBox(msg1, msg2, msg3, msg4, msg5, msg6, title)
+    }
+    
+    proc nextHandler() {
+        dismissHandler()
+        roadmapChosenHandler()
+    }
+    
+    proc backHandler() {
+        dismissHandler()
+        // Show the main roadmap widget again
+        execute1("showRoadmapWidget()")
+    }
+    
+    proc dismissHandler() {
+        mainBox.unmap()
+    }
+
+endtemplate MicrogliaTypeSelector

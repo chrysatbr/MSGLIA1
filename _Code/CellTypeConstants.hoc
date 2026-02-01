@@ -1,0 +1,172 @@
+/*
+    Cell Type Constants and Helper Functions
+    =========================================
+    This file defines the cell type enumeration system that replaces
+    the legacy binary isAstrocyteOrNeuron flag.
+    
+    Created for MSGLIA project - Microglia support
+    Based on BrainCell/Savtchenko architecture
+*/
+
+// ============================================================================
+// CELL TYPE CONSTANTS
+// ============================================================================
+
+CELL_TYPE_UNDEFINED = 0
+CELL_TYPE_ASTROCYTE = 1
+CELL_TYPE_MICROGLIA = 2
+CELL_TYPE_OLIGODENDROCYTE = 3
+CELL_TYPE_NEURON = 4
+
+// Current cell type (default: undefined, will be set by RoadmapWidget)
+cellType = CELL_TYPE_UNDEFINED
+
+// ============================================================================
+// MICROGLIA SUBTYPE CONSTANTS (Activation States)
+// ============================================================================
+
+MICROGLIA_TYPE_UNDEFINED = 0
+MICROGLIA_TYPE_RAMIFIED = 1          // Homeostatic/Surveillant
+MICROGLIA_TYPE_HYPER_RAMIFIED = 2    // Bushy/Pre-activated
+MICROGLIA_TYPE_REACTIVE = 3          // Activated/Inflammatory
+MICROGLIA_TYPE_AMOEBOID = 4          // Fully activated/Phagocytic
+
+// Current microglia subtype (only relevant when cellType == CELL_TYPE_MICROGLIA)
+microgliaType = MICROGLIA_TYPE_UNDEFINED
+
+// ============================================================================
+// CELL TYPE HELPER FUNCTIONS
+// ============================================================================
+
+// Check if current cell is a glial cell (not neuron)
+func isGlialCell() {
+    return (cellType != CELL_TYPE_NEURON && cellType != CELL_TYPE_UNDEFINED)
+}
+
+// Individual cell type checks
+func isAstrocyte() {
+    return (cellType == CELL_TYPE_ASTROCYTE)
+}
+
+func isMicroglia() {
+    return (cellType == CELL_TYPE_MICROGLIA)
+}
+
+func isOligodendrocyte() {
+    return (cellType == CELL_TYPE_OLIGODENDROCYTE)
+}
+
+func isNeuron() {
+    return (cellType == CELL_TYPE_NEURON)
+}
+
+// ============================================================================
+// BACKWARD COMPATIBILITY
+// ============================================================================
+// This maintains compatibility with existing code that uses isAstrocyteOrNeuron
+// isAstrocyteOrNeuron = 1 means glial cell (astrocyte-like behavior)
+// isAstrocyteOrNeuron = 0 means neuron
+// isAstrocyteOrNeuron = -1 means loaded from export file (type unknown)
+
+func getIsAstrocyteOrNeuron() {
+    if (cellType == CELL_TYPE_NEURON) {
+        return 0
+    } else if (cellType == CELL_TYPE_UNDEFINED) {
+        return -1
+    } else {
+        return 1  // All glial cells behave like astrocyte for legacy code
+    }
+}
+
+proc updateIsAstrocyteOrNeuron() {
+    isAstrocyteOrNeuron = getIsAstrocyteOrNeuron()
+}
+
+// ============================================================================
+// MICROGLIA SUBTYPE HELPER FUNCTIONS
+// ============================================================================
+
+func isRamifiedMicroglia() {
+    return (cellType == CELL_TYPE_MICROGLIA && microgliaType == MICROGLIA_TYPE_RAMIFIED)
+}
+
+func isHyperRamifiedMicroglia() {
+    return (cellType == CELL_TYPE_MICROGLIA && microgliaType == MICROGLIA_TYPE_HYPER_RAMIFIED)
+}
+
+func isReactiveMicroglia() {
+    return (cellType == CELL_TYPE_MICROGLIA && microgliaType == MICROGLIA_TYPE_REACTIVE)
+}
+
+func isAmoeboidMicroglia() {
+    return (cellType == CELL_TYPE_MICROGLIA && microgliaType == MICROGLIA_TYPE_AMOEBOID)
+}
+
+// ============================================================================
+// CELL TYPE NAME FUNCTIONS (for UI display)
+// ============================================================================
+
+proc getCellTypeName() { 
+    // $s1 = output string
+    if (cellType == CELL_TYPE_ASTROCYTE) {
+        $s1 = "Astrocyte"
+    } else if (cellType == CELL_TYPE_MICROGLIA) {
+        $s1 = "Microglia"
+    } else if (cellType == CELL_TYPE_OLIGODENDROCYTE) {
+        $s1 = "Oligodendrocyte"
+    } else if (cellType == CELL_TYPE_NEURON) {
+        $s1 = "Neuron"
+    } else {
+        $s1 = "Unknown"
+    }
+}
+
+proc getMicrogliaTypeName() {
+    // $s1 = output string
+    if (microgliaType == MICROGLIA_TYPE_RAMIFIED) {
+        $s1 = "Ramified (Homeostatic)"
+    } else if (microgliaType == MICROGLIA_TYPE_HYPER_RAMIFIED) {
+        $s1 = "Hyper-ramified (Bushy)"
+    } else if (microgliaType == MICROGLIA_TYPE_REACTIVE) {
+        $s1 = "Reactive (Activated)"
+    } else if (microgliaType == MICROGLIA_TYPE_AMOEBOID) {
+        $s1 = "Amoeboid (Phagocytic)"
+    } else {
+        $s1 = "Unknown"
+    }
+}
+
+// ============================================================================
+// CELL TYPE SETTER FUNCTIONS
+// ============================================================================
+
+proc setCellType() {
+    cellType = $1
+    updateIsAstrocyteOrNeuron()
+}
+
+proc setMicrogliaType() {
+    microgliaType = $1
+}
+
+// Combined setter for convenience
+proc setCellAndMicrogliaType() {
+    cellType = $1
+    microgliaType = $2
+    updateIsAstrocyteOrNeuron()
+}
+
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
+
+proc initCellTypeSystem() {
+    cellType = CELL_TYPE_UNDEFINED
+    microgliaType = MICROGLIA_TYPE_UNDEFINED
+    isAstrocyteOrNeuron = -1
+}
+
+// Initialize on load
+initCellTypeSystem()
+
+print "CellTypeConstants.hoc loaded successfully"
