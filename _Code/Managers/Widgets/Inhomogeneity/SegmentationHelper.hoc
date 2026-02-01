@@ -4,7 +4,7 @@ begintemplate SegmentationHelper
     public setDistRange, recalculateFactors, subdivideSection
     public segmentationMode, total_nseg, min_nseg
     
-    external isAstrocyteOrNeuron
+    external isAstrocyteOrNeuron, isAstrocyte, isMicroglia, isNeuron, isGlialCell
     external math
     external codeContractViolation
     
@@ -75,7 +75,7 @@ begintemplate SegmentationHelper
             new_nseg = min_nseg
         }
         
-        if (isAstrocyteOrNeuron && new_nseg < nseg) {
+        if (isGlialCell() && new_nseg < nseg) {
             // !! BUG: we do nothing here as a temp workaround for the following error:
             //             "You can not locate a point process at
             //              position 0 or 1 if it needs an ion

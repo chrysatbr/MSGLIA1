@@ -3,7 +3,7 @@ begintemplate InhomAndStochApplicator
     
     public startPlayingVars, stopPlayingVars, onInit, onStep
     
-    external isAstrocyteOrNeuron
+    external isAstrocyteOrNeuron, isAstrocyte, isMicroglia, isNeuron, isGlialCell
     external smAllSynSets
     external inhomAndStochLibrary
     external eachItemInList
@@ -22,7 +22,7 @@ begintemplate InhomAndStochApplicator
         if (!isAllPlayed) {
             return 1
         }
-        if (isAstrocyteOrNeuron) {
+        if (isGlialCell()) {
             return 0
         } else {
             return isMinRPlt1ForNeuron()
@@ -45,7 +45,7 @@ begintemplate InhomAndStochApplicator
         for eachActiveSpecialVarFromLib(specVar) {
             specVar.onStep()
         }
-        if (!isAstrocyteOrNeuron) {
+        if (isNeuron()) {
             afterStepForNeuron()
         }
     }

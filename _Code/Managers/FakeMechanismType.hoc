@@ -4,7 +4,7 @@ begintemplate FakeMechanismType
     public count
     public select, selected
     
-    external isAstrocyteOrNeuron
+    external isAstrocyteOrNeuron, isAstrocyte, isMicroglia, isNeuron, isGlialCell
     external utils4FakeMech4GapJuncExtValue, utils4FakeMech4SynNetCon
     
     objref mechNames
@@ -16,7 +16,7 @@ begintemplate FakeMechanismType
     proc init() {
         mechNames = new List()
         mechNames.append(new String(utils4FakeMech4GapJuncExtValue.mechName))
-        if (!isAstrocyteOrNeuron) {
+        if (isNeuron()) {
             mechNames.append(new String(utils4FakeMech4SynNetCon.mechName))
         }
         

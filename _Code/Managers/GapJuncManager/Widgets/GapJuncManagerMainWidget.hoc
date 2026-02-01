@@ -15,7 +15,7 @@ begintemplate GapJuncManagerMainWidget
 
     public show, selectSectionsHandler_layer2, onListsFilterLevelChangedHandler, warnIfUserHasNotSelectedPP, applyChangesToGapJuncStrucIfNeeded, applyChangesToDirtyHomogenVarsIfNeeded, updateNumInhomVarsLabel, updateNumStochVarsLabel, dismissHandler
     
-    external isAstrocyteOrNeuron
+    external isAstrocyteOrNeuron, isAstrocyte, isMicroglia, isNeuron, isGlialCell
     external gjmAllGapJuncSets
     external mwh, mth, mcu4t, utils4FakeMech4GapJuncExtValue, inhomAndStochLibrary, mechsDllUtils, math
     external getGlobalVarsHint, isAnyDisconSecsInCell, isAnyDisconSecsInList, showSeedingDensityWidget, stringEmpty, stringsEqual, stringToLowerCase, containsSubstring, createElasticSpacer, createEmptyPanel, dismissIfNotNil, codeContractViolation
@@ -91,7 +91,7 @@ begintemplate GapJuncManagerMainWidget
         maxRadiusForIntGapJuncs = gapJuncSet.maxRadiusForIntGapJuncs
         isCrissCrossForIntGapJuncs = gapJuncSet.isCrissCrossForIntGapJuncs
         
-        if (!isAstrocyteOrNeuron && !isExtOrInt) {
+        if (isNeuron() && !isExtOrInt) {
             codeContractViolation()
         }
         
@@ -142,7 +142,7 @@ begintemplate GapJuncManagerMainWidget
                     //         ideally, add a 3rd option to support "extra cell" properly (with a new widget to choose src and dst cells);
                     //         similarly, we need to add one more option for synapses to support "extra cell"
                     text = "External (requires 1 section)"
-                    if (isAstrocyteOrNeuron) {
+                    if (isGlialCell()) {
                         xradiobutton(text, "gapJuncTypeChangedHandler(1, 0)", isExtOrInt)
                         xradiobutton("Internal (requires 2 sections)", "gapJuncTypeChangedHandler(0, 0)", !isExtOrInt)
                     } else {
@@ -229,7 +229,7 @@ begintemplate GapJuncManagerMainWidget
             xlabel("")
             xbutton("* Show all locations", "showAllLocationsHandler()")
             mcu4t.addHintBelowShowAllLocationsButton()
-            if (isAstrocyteOrNeuron) {
+            if (isGlialCell()) {
                 xlabel("  (to review the Int GJ Pointer locations, select \"PointProcessMark\")")
             }
             xlabel("")

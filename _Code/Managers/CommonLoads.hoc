@@ -7,12 +7,12 @@ makeSureDeclaredButCheck("inhomAndStochLibrary")
 // !!
 makeSureDeclaredButCheck("ecsLibrary")
 
-if (isAstrocyteOrNeuron) {
+if (isGlialCell()) {
     objref enumSynCompIdxs
 }
 
 loadIfNotDeclared("UtilsForFakeMechanismForExtValue", "GapJuncManager/FakesForExtValue/Exported/UtilsForFakeMechanismForExtValue.hoc")
-if (isAstrocyteOrNeuron) {
+if (isGlialCell()) {
     objref utils4FakeMech4SynNetCon
 } else {
     loadIfNotDeclared("UtilsForFakeMechanismForNetCon", "SynManager/FakesForNetCon/Exported/UtilsForFakeMechanismForNetCon.hoc")

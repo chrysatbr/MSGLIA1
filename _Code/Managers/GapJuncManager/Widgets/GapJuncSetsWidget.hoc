@@ -4,7 +4,7 @@ begintemplate GapJuncSetsWidget
     
     public show, onApplyInChildHandler, dismissHandler
     
-    external isAstrocyteOrNeuron
+    external isAstrocyteOrNeuron, isAstrocyte, isMicroglia, isNeuron, isGlialCell
     external gjmAllGapJuncSets
     external mwh, mcu4t, inhomAndStochLibrary
     external cacheTotalSecLen, getMaxDistForCell, deleteSelectedItemFromBrowsedList, openDeck, closeDeck, getIfYouModifyGeomHint, addEmptyLabels, unmapIfNotNil, dismissIfNotNil, codeContractViolation
@@ -53,7 +53,7 @@ begintemplate GapJuncSetsWidget
                 deck = openDeck()
                 {
                     xpanel("")
-                    if (isAstrocyteOrNeuron) {
+                    if (isGlialCell()) {
                         xbutton("Add new set of Ext GJs (default)", "addNewExtSetHandler()")
                         xbutton("Add new set of Int GJs (default)", "addNewIntSetHandler()")
                     } else {
@@ -61,7 +61,7 @@ begintemplate GapJuncSetsWidget
                     }
                     xlabel("")
                     xbutton("Edit this set", "editSetHandler()")
-                    numSpacers = 5 - isAstrocyteOrNeuron
+                    numSpacers = 5 - isGlialCell()
                     addEmptyLabels(numSpacers)
                     xbutton("Delete this set", "deleteSetHandler()")
                     xpanel()
@@ -70,7 +70,7 @@ begintemplate GapJuncSetsWidget
             }
             hBox.intercept(0)
             hBox.map()
-            if (isAstrocyteOrNeuron) {
+            if (isGlialCell()) {
                 // Add the warning related to pyObj.intGapJuncPtrSeedingHelper lifecycle
                 xpanel("")
                 getIfYouModifyGeomHint(text)
@@ -102,7 +102,7 @@ begintemplate GapJuncSetsWidget
         
         cacheTotalSecLen()
         
-        if (isAstrocyteOrNeuron) {
+        if (isGlialCell()) {
             pyObj.intGapJuncPtrSeedingHelper.cacheAllSegms3DCoords()
         }
     }
@@ -116,7 +116,7 @@ begintemplate GapJuncSetsWidget
         dismissChilds()
         unmapIfNotNil(mainBox)
         
-        if (isAstrocyteOrNeuron) {
+        if (isGlialCell()) {
             pyObj.intGapJuncPtrSeedingHelper.destroyCache()
         }
     }

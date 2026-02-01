@@ -4,7 +4,7 @@ begintemplate SpineNeckDiamCache
     public cacheAllDiams, getCachedDiam
     public diamsVec
     
-    external isAstrocyteOrNeuron
+    external isAstrocyteOrNeuron, isAstrocyte, isMicroglia, isNeuron, isGlialCell
     external codeContractViolation
     
     objref spineNecks_ref
@@ -14,7 +14,7 @@ begintemplate SpineNeckDiamCache
     proc init() {
         spineNecks_ref = $o1
         
-        if (isAstrocyteOrNeuron) {
+        if (isGlialCell()) {
             codeContractViolation()
         }
         

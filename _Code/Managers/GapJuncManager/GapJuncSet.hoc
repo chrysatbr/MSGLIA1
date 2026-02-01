@@ -7,7 +7,7 @@ begintemplate GapJuncSet
     public allComps, allGapJuncs
     public s
     
-    external isAstrocyteOrNeuron
+    external isAstrocyteOrNeuron, isAstrocyte, isMicroglia, isNeuron, isGlialCell
     external mth, mcu, tapSet, utils4FakeMech4GapJuncExtValue
     external forallCallApplyChangesToLocCore
     external getDefMinSeedingDistanceForGapJuncs, reseedDefaultGapJuncs, chooseRandomLocationForIntGapJuncPointer, stringsEqual, stringEmpty, getEmptyOrS, codeContractViolation
@@ -85,7 +85,7 @@ begintemplate GapJuncSet
             codeContractViolation()
         }
         
-        if (!isAstrocyteOrNeuron && !isExtOrInt) {
+        if (isNeuron() && !isExtOrInt) {
             codeContractViolation()
         }
         

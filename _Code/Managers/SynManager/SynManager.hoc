@@ -7,7 +7,7 @@
 
 proc makeSureSynSetsCreatedOrImported() { localobj nil
     
-    if (isAstrocyteOrNeuron) {
+    if (isGlialCell()) {
         codeContractViolation()
     }
     

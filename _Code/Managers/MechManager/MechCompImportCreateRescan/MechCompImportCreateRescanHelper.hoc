@@ -6,6 +6,7 @@ begintemplate MechCompImportCreateRescanHelper
     public rescanNow, scheduleRescan, makeSureMechCompsCreatedOrImportedAndRescanned
     
     external isAstrocyteOrNeuron, isBaseOrNanoStart, NumberNanoBranches
+    external isGlialCell, isAstrocyte, isMicroglia, isNeuron
     external soma_ref, dendrite_ref, endFoot_ref, axon_ref, nanoProximal_ref, nanoDistal_ref
     external mmAllComps
     external _findAllRemainingSects
@@ -157,13 +158,18 @@ begintemplate MechCompImportCreateRescanHelper
             concatenateTwoLists(mmAllComps, createListOfMechCompsBasedOnMechInsertion("Soma", soma_ref))
             concatenateTwoLists(mmAllComps, createListOfMechCompsBasedOnMechInsertion("Dendrites", dendrite_ref))
             
-            if (isAstrocyteOrNeuron) {
+            if (isGlialCell()) {
                 if (endFoot_ref != nil) {
                     mmAllComps.append(new MechComp("End Foot", endFoot_ref))
                 }
                 
-                nanoProxyCompName = "Small Glia"
-                nanoDistCompName = "Large Glia"
+                if (isMicroglia()) {
+                    nanoProxyCompName = "Secondary Branch"
+                    nanoDistCompName = "Primary Process"
+                } else {
+                    nanoProxyCompName = "Small Glia"
+                    nanoDistCompName = "Large Glia"
+                }
             } else {
                 concatenateTwoLists(mmAllComps, createListOfMechCompsBasedOnMechInsertion("Axon", axon_ref))
                 

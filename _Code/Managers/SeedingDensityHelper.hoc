@@ -1,5 +1,6 @@
 
 proc reseedAstrocyteNanoBranches() { codeContractViolation() }
+proc reseedGlialNanoBranches() { codeContractViolation() }
 
 
 begintemplate SeedingDensityHelper
@@ -7,7 +8,7 @@ begintemplate SeedingDensityHelper
     public getMinSeedingDistance, onShowInSeedingDensityWidget, onDoneInSeedingDensityWidget
     public isNanoGeomOrGapJuncs, isUniform, minSeedingDistance, oneLinerPyDistFuncBody
     
-    external isAstrocyteOrNeuron
+    external isAstrocyteOrNeuron, isAstrocyte, isMicroglia, isNeuron, isGlialCell
     external veryMinSeedingDistance
     external math
     external reseedAstrocyteNanoBranches, createVecOfVals, createListOfStrs, codeContractViolation
@@ -64,7 +65,7 @@ begintemplate SeedingDensityHelper
     
     proc onShowInSeedingDensityWidget() {
         if (isNanoGeomOrGapJuncs) {
-            if (isAstrocyteOrNeuron) {
+            if (isGlialCell()) {
                 $s1 = "stalks"
                 $s3 = "Apply"
             } else {
@@ -92,9 +93,9 @@ begintemplate SeedingDensityHelper
             distFuncHelper.importParams(vecOfVals, listOfStrs)
         }
         
-        isStalkSeeding = (isNanoGeomOrGapJuncs && isAstrocyteOrNeuron)
+        isStalkSeeding = (isNanoGeomOrGapJuncs && isGlialCell())
         if (isStalkSeeding) {
-            reseedAstrocyteNanoBranches()   // --> getMinSeedingDistance
+            reseedGlialNanoBranches()   // --> getMinSeedingDistance
         }
         
         isClose = !isStalkSeeding

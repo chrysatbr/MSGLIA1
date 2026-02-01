@@ -2,7 +2,7 @@
 // !! if user loads mechanisms dynamically (see neuron.load_mechanisms), then we need to re-create the singleton object
 
 { load_file("GapJuncManager/GapJuncManagerBaseLoads.hoc") }
-if (!isAstrocyteOrNeuron) {
+if (isNeuron()) {
     load_file("SynManager/SynManagerBaseLoads.hoc")
 }
 
@@ -14,7 +14,7 @@ begintemplate MechTypeHelper
     public extracellularMechName, ionSuffix
     // See also: mechsDllUtils.firstCustomDmMechIdx and .firstCustomPpMechIdx
     
-    external isAstrocyteOrNeuron
+    external isAstrocyteOrNeuron, isAstrocyte, isMicroglia, isNeuron, isGlialCell
     external stringsEqual, stringEmpty, codeContractViolation
     external mwh, mechSettings, utils4FakeMech4GapJuncExtValue, utils4FakeMech4SynNetCon
     external eachItemInList
@@ -44,7 +44,7 @@ begintemplate MechTypeHelper
         objref utils4FakeMechs[2]           // 0: gap juncs, 1: syns
         
         utils4FakeMechs[utils4FakeMech4GapJuncExtValue.mechIdx] = utils4FakeMech4GapJuncExtValue
-        if (!isAstrocyteOrNeuron) {
+        if (isNeuron()) {
             utils4FakeMechs[utils4FakeMech4SynNetCon.mechIdx] = utils4FakeMech4SynNetCon
         }
         

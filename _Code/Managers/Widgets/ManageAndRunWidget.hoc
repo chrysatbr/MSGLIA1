@@ -11,7 +11,7 @@ begintemplate ManageAndRunWidget
 
     public show, showBioManagerHandler, showSynManagerHandler, showGapJuncManagerHandler, showECSManagerHandler, showIODManagerHandler, showAltRunControlHandler, onNanoReseedOrUpdateHandler, dismissHandler
     
-    external isAstrocyteOrNeuron
+    external isAstrocyteOrNeuron, isAstrocyte, isMicroglia, isNeuron, isGlialCell
     external mechManagerMainWidget, synSetsWidget, gapJuncSetsWidget, ecsManagerMainWidget, iodManagerMainWidget, exportManagerMainWidget, altRunControlWidget
     external mmAllComps, gjmAllGapJuncSets, smAllSynSets
     external mwh, mmIcrHelper
@@ -142,7 +142,7 @@ begintemplate ManageAndRunWidget
         for eachItemInList(gapJuncSet, gjmAllGapJuncSets) {
             gapJuncSet.reCalcAndCacheDistInGapJuncs()
         }
-        if (!isAstrocyteOrNeuron) {
+        if (isNeuron()) {
             for eachItemInList(synSet, smAllSynSets) {
                 synSet.reCalcAndCacheDistInSyns()
             }
