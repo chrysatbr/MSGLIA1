@@ -46,7 +46,7 @@ proc InsertElectricMechanisms() { local isCadifusOrFRAP
 // Insert mechanisms needed for Glutamate simulation and set their params.
 proc _SectionInsertGlutamateMechanisms() {
     insert CAl
-    if (isAstrocyteOrNeuron) {
+    if (isGlialCell()) {
         execute("insert kdrglia")
         execute("insert kir")
     }
@@ -306,12 +306,17 @@ proc _SectionInsertPiezo1Mechanisms() {
     k87_Piezo1 = 0.4
     k81_Piezo1 = 0.001
     k18_Piezo1 = 0.0005
+    density_scale_mode = 0      
+    density_scale_factor = 1.0  
+    ca_modulation_strength = 0.0  
+    ca_half = 0.0005         
+
 }
 
 proc _SectionInsertPiezo2Mechanisms() {
     insert Piezo2
     // Set default parameters
-    density_Piezo2 = 1e8
+    density_Piezo2 = 1e5
     mforce_Piezo2 = 0
     force_sensitivity_Piezo2 = 0.08
     force_threshold_Piezo2 = 0.3       
@@ -335,6 +340,10 @@ proc _SectionInsertPiezo2Mechanisms() {
     k87_Piezo2 = 0.6
     k81_Piezo2 = 0.002
     k18_Piezo2 = 0.001
+    density_scale_mode = 0      
+    density_scale_factor = 1.0  
+    ca_modulation_strength = 0.0  
+    ca_half = 0.0005
 }
 
 DensityGluTransporters = 1e12   // 1/um2
@@ -446,37 +455,82 @@ proc _SectionInsertTRPV4Mechanisms() {
 proc _SectionInsertTRPA1Mechanisms() {
     insert trpa1
     
-    // === CHANNEL PROPERTIES ===
+    // === CHANNEL BIOPHYSICS ===
+    single_channel_cond_trpa1 = 120
     g_trpa1 = 0.00015
-    pca_trpa1 = 1.0
-    pna_trpa1 = 0.1
-    pk_trpa1 = 0.08
+    pca_trpa1 = 6.5
+    pna_trpa1 = 1.0
+    pk_trpa1 = 0.9
     
-    // === CONSTITUTIVE/BASAL ACTIVITY ===
+    // === ACTIVATION KINETICS ===
+    tau_activation_trpa1 = 0.5
+    tau_deactivation_trpa1 = 5
+    
+    // === CALCIUM MODULATION ===
+    ca_ec50_pot_trpa1 = 0.0009
+    ca_ec50_inact_trpa1 = 0.005
+    tau_potentiation_trpa1 = 0.3
+    tau_inactivation_trpa1 = 10
+    tau_recovery_trpa1 = 60
+    
+    // === AGONIST/ANTAGONIST ===
+    agonist_conc_trpa1 = 0
+    agonist_ec50_trpa1 = 65.0
+    agonist_hill_trpa1 = 1.8
+    antagonist_conc_trpa1 = 0
+    antagonist_ic50_trpa1 = 6.0
+    antagonist_hill_trpa1 = 1.5
+    
+    // === OXIDATIVE STRESS ===
+    oxidative_stress_trpa1 = 0
+    ros_conc_trpa1 = 0
+    h2o2_conc_trpa1 = 0
+    hne_conc_trpa1 = 0
+    lps_conc_trpa1 = 0
+    oxidative_sens_trpa1 = 2.0
+    ros_threshold_trpa1 = 0.1
+    
+    // === EXPRESSION ===
+    trpa1_baseline = 1.0
+    expression_ros_sens_trpa1 = 0.5
+    tau_expression_trpa1 = 720
+    
+    // === NF-kB PATHWAY ===
+    nfkb_act_rate_trpa1 = 0.1
+    nfkb_decay_trpa1 = 0.02
+    nfkb_threshold_trpa1 = 0.05
+    tau_nfkb_trpa1 = 45
+    
+    // === CYTOKINES ===
+    tnfa_baseline_trpa1 = 0.1
+    il1b_baseline_trpa1 = 0.1
+    il6_baseline_trpa1 = 0.1
+    ccl2_baseline_trpa1 = 0.1
+    cytokine_nfkb_dep_trpa1 = 2.0
+    cytokine_decay_trpa1 = 0.01
+    
+    // === GEOMETRY ===
+    density_scale_mode_trpa1 = 1
+    density_scale_factor_trpa1 = 1.0
+    
+    // === CONSTITUTIVE/BASAL ===
     basal_open_prob_trpa1 = 0.05
     max_open_prob_trpa1 = 0.8
     
-    // === TEMPORAL DYNAMICS ===
-    tau_activation_trpa1 = 50
-    tau_deactivation_trpa1 = 200
+    // === LEGACY ===
     tau_desens_trpa1 = 2000
-    
-    // === SPOTTY Ca2+ SIGNALS ===
     tau_rise_spotty_trpa1 = 100
     tau_decay_spotty_trpa1 = 500
     spotty_frequency_trpa1 = 0.49
     spotty_amplitude_max_trpa1 = 2.0
-    
-    // === PHARMACOLOGICAL ===
+    spotty_ca_scale_trpa1 = 0.0001
     agonist_sensitivity_trpa1 = 2.0
     blocker_sensitivity_trpa1 = 5.0
-    temp_coefficient_trpa1 = 2.0
-
-    oxidative_stress_trpa1 = 0
-    agonist_conc_trpa1 = 0
-    antagonist_conc_trpa1 = 0
+    oxidative_sensitivity_trpa1 = 1.5
+    temp_sensitivity_trpa1 = 0.03
+    temp_coefficient_trpa1 = 2.5
+    ca_modulation_strength_trpa1 = 0.0
 }
-
 // Insert mechanisms for Glutamate simulation.
 proc InsertGlutamateMechanisms() {
 

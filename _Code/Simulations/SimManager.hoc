@@ -10,7 +10,7 @@ begintemplate SimulationManager
     // !! just for test
     public simCatIdx, programmaticClick
     
-    external isAstrocyteOrNeuron
+    external isAstrocyteOrNeuron, isAstrocyte, isMicroglia, isNeuron, isGlialCell
     external InsertElectricMechanisms, InsertGlutamateMechanisms, InsertPotassiumMechanisms, InsertPiezo1Mechanisms, InsertPiezo2Mechanisms, InsertTNFaMechanisms, InsertIL1bMechanisms, InsertIL6Mechanisms, InsertTRPV4Mechanisms, InsertTRPA1Mechanisms
     external showIntegratesWithAltRunControlMsg, deployDefaultProcAdvance, deployCustomProcAdvance, stringEmpty, dismissIfNotNil, codeContractViolation
     external mainUiLocker, mmIcrHelper, beih, mwh, pyObj
@@ -33,11 +33,11 @@ begintemplate SimulationManager
     
     proc init() { local numSims
         
-        numSims = 21
+        numSims = 22
         
         objref simIdxToWidget[numSims]
-        if (!isAstrocyteOrNeuron) {
-            execute("simIdxToWidget[0] = new SimVoltageCA1Neuron()", this)      // The template is not loaded for astrocytes
+        if (isNeuron()) {
+            execute("simIdxToWidget[0] = new SimVoltageCA1Neuron()", this)      // The template is not loaded for glial cells
         }
         simIdxToWidget[1] = new SimSpatialVoltageDistributions()
         simIdxToWidget[2] = pyObj.SimLocalFieldPotential()
@@ -46,7 +46,7 @@ begintemplate SimulationManager
         simIdxToWidget[5] = new SimFrapCylinder()
         simIdxToWidget[6] = new SimFrapPlane()
         simIdxToWidget[7] = new SimFrapSphere()
-        if (isAstrocyteOrNeuron) {
+        if (isGlialCell()) {
             execute("simIdxToWidget[8] = new SimCalciumDynamics()", this)       // The template is not loaded for neurons
         }
         simIdxToWidget[9] = new SimCalciumWave()
@@ -60,12 +60,13 @@ begintemplate SimulationManager
         simIdxToWidget[17] = new SimIL6()
 	simIdxToWidget[18] = new SimPiezo2()
 	simIdxToWidget[19] = new SimTRPA1()
+	
 
 	
 	
         
-	if (!isAstrocyteOrNeuron) {
-            simIdxToWidget[20] = pyObj.SimMyelinatedAxon()
+	if (isNeuron()) {
+            simIdxToWidget[21] = pyObj.SimMyelinatedAxon()
         }
         
         simCatIdx = 0
@@ -85,18 +86,19 @@ begintemplate SimulationManager
         xlabel("Simulation category:")
         createCatRadioButton("Voltage / potential", 0)
         createCatRadioButton("Electric stimuli", 1)
-        createCatRadioButton("Focused Ultrasound", 2)
+        createCatRadioButton("FRAP", 2)
         createCatRadioButton("Calcium", 3)
         createCatRadioButton("Other species", 4)
 	createCatRadioButton("Mechanoreceptors", 5)
 	createCatRadioButton("Cytocines", 6)
+	createCatRadioButton("Focused Ultrasound", 7)
         xlabel("")
         xpanel()
         deck = new Deck()
         deck.intercept(1)
         {
             xpanel("")
-            if (!isAstrocyteOrNeuron) {
+            if (isNeuron()) {
                 xlabel("Basic voltage simulation of CA1-neuron")
                 createSimStateButton("CA1-neuron voltage", 0)
                 insertSpacer()
@@ -117,21 +119,19 @@ begintemplate SimulationManager
             insertSpacer()
             xpanel()
             xpanel("")
-            //xlabel("Simulation of FUS experiment with round-spot bleaching")
-            //createSimStateButton("FUS with round-spot bleaching", 5)
+            //xlabel("Simulation of FRAP experiment with round-spot bleaching")
+            //createSimStateButton("FRAP with round-spot bleaching", 5)
             insertSpacer()
-            xlabel("Simulation of line-scan FUS")
-            createSimStateButton("Line-scan FUS", 6)
+            xlabel("Simulation of line-scan FRAP")
+            createSimStateButton("Line-scan FRAP", 6)
             insertSpacer()
-            xlabel("Simulation of Sphere-scan FUS")
-            createSimStateButton("Sphere-scan FUS", 7)
-            insertSpacer()
-	    xlabel("Simulation of Focused Ultrasound")
-            createSimStateButton("FUS", 7)
+            xlabel("Simulation of Sphere-scan FRAP")
+            createSimStateButton("Sphere-scan FRAP", 7)
+            
             insertSpacer()
             xpanel()
             xpanel("")
-            if (isAstrocyteOrNeuron) {
+            if (isGlialCell()) {
                 xlabel("Parameters for microscopic calcium dynamics")
                 createSimStateButton("Microscopic calcium dynamics", 8)
                 insertSpacer()
@@ -141,9 +141,9 @@ begintemplate SimulationManager
             insertSpacer()
             xpanel()
             xpanel("")
-            if (isAstrocyteOrNeuron) {
-                text1 = "Potassium outside-in diffusion for astrocyte"
-                text2 = "Astrocyte K+ diffusion"
+            if (isGlialCell()) {
+                text1 = "Potassium outside-in diffusion for glial cell"
+                text2 = "Glial K+ diffusion"
             } else {
                 text1 = "GABA outside-in diffusion for basket cell interneuron"
                 text2 = "Basket cell GABA diffusion"
@@ -158,9 +158,9 @@ begintemplate SimulationManager
             createSimStateButton("Dynamics of intra and extracellular K+", 12)
 
             insertSpacer()
-            if (!isAstrocyteOrNeuron) {
+            if (isNeuron()) {
                 xlabel("Axon model with myelin sheath and K+ radial diffusion")
-                createSimStateButton("Axon simulation", 20)
+                createSimStateButton("Axon simulation", 21)
                 insertSpacer()
             }
            xpanel()
@@ -187,6 +187,15 @@ begintemplate SimulationManager
 	   insertSpacer()
 	   xlabel("Interleukin-6 (IL6) - Activates IL10")  
 	   createSimStateButton("IL6 cytokine dynamics", 17)  
+	   
+
+	   xpanel()
+           xpanel("")
+           xlabel("FUS")
+           createSimStateButton("Dynamics of FUS channel", 6)
+           insertSpacer()
+           xlabel("FUS mechanosensitive channel")
+           createSimStateButton("Dynamics of FUS channel", 7)
 	   insertSpacer()
 	   xpanel()
             }

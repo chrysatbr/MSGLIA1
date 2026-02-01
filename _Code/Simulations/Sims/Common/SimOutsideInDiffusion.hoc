@@ -22,7 +22,7 @@ begintemplate SimOutsideInDiffusion
     // Just a workaround to avoid the error in GraphUtils.parseVarsFromTheGraph
     public numSrcs, radiusGen, recorder
     
-    external isAstrocyteOrNeuron
+    external isAstrocyteOrNeuron, isAstrocyte, isMicroglia, isNeuron, isGlialCell
     external createExtracellularGeneratorHintsPanel, showExtracellularManagerBaseWidget, applyExtracellularSourcesWithWaitBoxAndUpdateMainUiDiffStatusIndication, destroyTempSects
     external sourcePythonCodeForRangeVarHistory, unmapIfNotNil, dismissIfNotNil
     external mwh, math, geomMath, ecsLibrary, speciesLibrary, compUtils, beih, rngUtils
@@ -93,7 +93,7 @@ begintemplate SimOutsideInDiffusion
     func preShowCheck() { localobj missingCompNames, nil
         strdef axonCompName
         
-        if (isAstrocyteOrNeuron) {
+        if (isGlialCell()) {
             return 0
         }
         
@@ -125,7 +125,7 @@ begintemplate SimOutsideInDiffusion
         
         recorder.setDefaultDt(4)    // factor
         
-        if (isAstrocyteOrNeuron) {
+        if (isGlialCell()) {
             spcCatIdx = 0
             species = "K+"
             w = 475
@@ -180,7 +180,7 @@ begintemplate SimOutsideInDiffusion
                 vBox.intercept(1)
                 {
                     xpanel("")
-                    if (isAstrocyteOrNeuron) {
+                    if (isGlialCell()) {
                         xlabel("1. Click \"Generate random\" in \"Manager of extracellular sources\" and follow the instructions inside")
                         xlabel("    to create multiple extracellular sources with uniform distribution in a sphere.")
                         xlabel("2. Adjust \"Recording period\" (below), click \"Start simulation\" and specify the output file path and name.")
@@ -192,7 +192,7 @@ begintemplate SimOutsideInDiffusion
                     }
                     // !! also, specify the range var name and where to watch it
                     xpanel()
-                    if (!isAstrocyteOrNeuron) {
+                    if (isNeuron()) {
                         xpanel("")
                         xpvalue("Number of sources", &numSrcs, 1)
                         xpvalue("Radius of generation", &radiusGen, 1)

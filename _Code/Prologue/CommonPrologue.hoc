@@ -13,7 +13,9 @@ seededDendrite_ref = dendrite_ref
 { load_file("../Managers/SeedingDensityHelper.hoc") }
 { load_file("../NanoCore/NanoBranchesManager.hoc") }
 
-if (isAstrocyteOrNeuron) {
+if (isAstrocyte()) {
+    nanoBranchesManager = new NanoBranchesManager(MaxNumberStalksPerDendrite)
+} else if (isMicroglia()) {
     nanoBranchesManager = new NanoBranchesManager(MaxNumberStalksPerDendrite)
 } else {
     nanoBranchesManager = new NanoBranchesManager(MaxNumberSpinesPerDendrite)

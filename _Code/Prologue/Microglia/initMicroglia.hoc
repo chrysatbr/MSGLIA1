@@ -1,0 +1,206 @@
+/*
+    Microglia Initialization
+    ========================
+    The software is for computational modeling of microglia.
+    Based on the astrocyte modeling framework by Savtchenko & Bhatti.
+    
+    Microglia models support four morphological states:
+    - Ramified (Homeostatic)
+    - Hyper-ramified (Bushy)
+    - Reactive (Activated)
+    - Amoeboid (Phagocytic)
+    
+    Created for MSGLIA project
+*/
+
+// Load microglia state parameters (contains setMicrogliaParametersByType)
+{ load_file("../../NanoCore/Microglia/MicrogliaStateParameters.hoc") }
+
+// Variables matching Astrocyte naming for compatibility
+// NumberLeavesPerStalk = number of secondary branches per primary process
+NumberLeavesPerStalk = 10
+MaxNumberStalksPerDendrite = 6
+
+objref BoxMicrogliaParams
+
+// ============================================================================
+// SHOW MICROGLIA PARAMETER WIDGET
+// ============================================================================
+
+proc showMicrogliaLevelOfNanoDetailWidget() {
+    strdef microgliaTypeName
+    
+    getMicrogliaTypeName(microgliaTypeName)
+    
+    BoxMicrogliaParams = new VBox()
+    BoxMicrogliaParams.intercept(1)
+    {
+        xpanel("")
+        xlabel("========== Load microglia geometry files ==========")
+        xlabel("")
+        sprint(microgliaTypeName, "Selected morphology: %s", microgliaTypeName)
+        xlabel(microgliaTypeName)
+        xlabel("")
+        xlabel("Critical parameters of microglia geometry.")
+        xlabel("")
+        
+        // Max number of processes per dendrite (like stalks in astrocyte)
+        xlabel("Maximum number of processes per dendrite")
+        xpvalue("Max number of processes", &MaxNumberStalksPerDendrite, 1)
+        
+        // Number of secondary branches per process (like leaves per stalk)
+        xlabel("")
+        xlabel("Number of secondary branches per process")
+        xpvalue("Number of branches", &NumberLeavesPerStalk, 1)
+        
+        xpanel(0)
+    }
+    BoxMicrogliaParams.intercept(0)
+    BoxMicrogliaParams.map("Microglia Process Parameters", 50, 300, -1, -1)
+}
+
+// Set parameters based on selected microglia type
+setMicrogliaParametersByType(microgliaType)
+
+// Show the parameter widget
+showMicrogliaLevelOfNanoDetailWidget()
+
+{ load_file("nrngui.hoc") }
+{ load_file("../../MainUI/NanoDistrFromFile.hoc") }
+
+
+// ============================================================================
+// UI ELEMENTS
+// ============================================================================
+
+objref vBoxSelectMicrogliaGeometry, plotShapeMicrogliaGeometry
+
+
+// Shows geometry
+proc showSelectedGeometry() {
+    removeItemFromList(fast_flush_list, plotShapeMicrogliaGeometry)
+    plotShapeMicrogliaGeometry = new PlotShape(0)
+    fast_flush_list.append(plotShapeMicrogliaGeometry)
+    plotShapeMicrogliaGeometry.size(-30, 30, -30, 30)
+    plotShapeMicrogliaGeometry.variable("v")
+    plotShapeMicrogliaGeometry.view(-30, -30, 60, 60, 850, 300, 400, 400)
+    plotShapeMicrogliaGeometry.exec_menu("View = plot")
+}
+
+
+isMicrogliaBaseGeometryImported = 0
+
+
+// ============================================================================
+// GEOMETRY LOADING FUNCTIONS
+// ============================================================================
+
+// Loads basic geometry file
+proc loadGeometryFile() {
+    importHocOrSwcOrZipOrOtherFile("isMicrogliaBaseGeometryImported = 1")
+}
+
+// Loads geometry file for reconstructed microglia
+proc loadGeometryFileReconstruct() {
+    importHocOrSwcOrZipOrOtherFile("loadGeometryFileReconstruct_afterImport()")
+}
+
+proc loadGeometryFileReconstruct_afterImport() {
+    isMicrogliaBaseGeometryImported = 1
+    
+    // Scale factors for reconstruction
+    LengthXY = 1.0  // X-Y scale
+    LengthZ = 1.0   // Z scale
+    ShiftXY = 0     // Shift in X-Y plane
+    
+    // Could load a stretch/scale file here if needed
+    // load_file("_Code/Prologue/Microglia/StretchXY.hoc")
+}
+
+
+// ============================================================================
+// MAIN PROGRAM INITIALIZATION
+// ============================================================================
+
+proc initMainProgram() {
+    
+    if (!isMicrogliaBaseGeometryImported) {
+        mwh.showWarningBox("Please load some geometry file first.")
+        return
+    }
+    
+    vBoxSelectMicrogliaGeometry.unmap()
+    plotShapeMicrogliaGeometry.unmap()
+    BoxMicrogliaParams.unmap()
+    
+    if (!isExternalSimStart) {
+        mechsDllUtils.loadDefaultMechsDllDependingOnCellType()
+    }
+    
+    // Load common prologue files
+    load_file("_Code/Prologue/CreateDefaultGapJuncs.hoc")
+    load_file("_Code/Prologue/CommonPrologue.hoc")
+    
+    // Microglia prologue complete
+    prologueCompleteHandler()
+}
+
+
+// ============================================================================
+// GEOMETRY SELECTION UI
+// ============================================================================
+
+proc showSelectGeometryUi() {
+    strdef microgliaTypeName, titleStr
+    
+    getMicrogliaTypeName(microgliaTypeName)
+    sprint(titleStr, "Microglia Model - %s", microgliaTypeName)
+    
+    vBoxSelectMicrogliaGeometry = new VBox()
+    vBoxSelectMicrogliaGeometry.intercept(1)
+    {
+        xpanel("")
+        xlabel("========== Load microglia geometry files ==========")
+        xlabel("")
+        sprint(microgliaTypeName, "Current morphology: %s", microgliaTypeName)
+        xlabel(microgliaTypeName)
+        xlabel("")
+        xlabel("Load microglia base morphology.")
+        xlabel("(SWC files from NeuroMorpho.org recommended)")
+        xbutton("Select base geometry file", "loadGeometryFile()")
+        
+        xlabel("─────────────────────────────────────────────")
+        xlabel("Load reconstructed microglia morphology")
+        xlabel("with scaling options.")
+        xbutton("Select reconstructed geometry", "loadGeometryFileReconstruct()")
+        
+        xlabel("─────────────────────────────────────────────")
+        xlabel("Load distribution of process diameters")
+        xlabel("(Optional - uniform distribution used by default)")
+        xbutton("Select diameter distribution file", "loadDiamDistrFile()")
+        
+      
+        
+        xlabel("─────────────────────────────────────────────")
+	xbutton("Start Microglia Model", "initMainProgram()")
+        xbutton("Change Microglia Type", "changeMicrogliaType()")
+        xbutton("Quit", "quit()")
+        xpanel(0)
+    }
+    vBoxSelectMicrogliaGeometry.intercept(0)
+    vBoxSelectMicrogliaGeometry.map(titleStr, 500, 170, -1, -1)
+}
+
+proc changeMicrogliaType() {
+    // Close current windows
+    vBoxSelectMicrogliaGeometry.unmap()
+    unmapIfNotNil(plotShapeMicrogliaGeometry)
+    BoxMicrogliaParams.unmap()
+    
+    // Show microglia type selector again
+    showMicrogliaTypeSelector()
+}
+
+showSelectGeometryUi()
+
+print "initMicroglia.hoc loaded successfully"

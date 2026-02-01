@@ -6,7 +6,7 @@ loadIfNotDeclared("GapJunction", "Exported/GapJunction.hoc", 1)
 gjmDefMaxNumGapJuncsPerSec = 10
 gjmDefMaxRadiusForIntGapJuncsForAstrocyte = 20  // um
 
-if (isAstrocyteOrNeuron) {
+if (isGlialCell()) {
     _defApproxNumWantedExtGapJuncs = 350
     _defApproxNumWantedIntGapJuncs = 100
 } else {
@@ -29,7 +29,7 @@ obfunc reseedDefaultGapJuncs() { local isExtOrInt, minSeedingDistance, slotIdx, 
     
     isExtOrInt = $1
     
-    if (!isAstrocyteOrNeuron && !isExtOrInt) {
+    if (isNeuron() && !isExtOrInt) {
         codeContractViolation()
     }
     
@@ -38,7 +38,7 @@ obfunc reseedDefaultGapJuncs() { local isExtOrInt, minSeedingDistance, slotIdx, 
     minSeedingDistance = getDefMinSeedingDistanceForGapJuncs(isExtOrInt)
     
     forall {
-        if (isAstrocyteOrNeuron && isExtOrInt) {
+        if (isGlialCell() && isExtOrInt) {
             insert ca_ion   // For "GapCaExtr" PP
         }
         
@@ -51,7 +51,7 @@ obfunc reseedDefaultGapJuncs() { local isExtOrInt, minSeedingDistance, slotIdx, 
                 sec_ref = new SectionRef()
                 
                 if (isExtOrInt) {
-                    if (isAstrocyteOrNeuron) {
+                    if (isGlialCell()) {
                         execute("_sngPp = new GapCaExtr(_connectionPoint)")      // "execute"-ing to avoid "GapCaExtr is not a template" error for neuron
                     } else {
                         execute("_sngPp = new Gap_neuron(_connectionPoint)")     // "execute"-ing to avoid "Gap_neuron is not a template" error for astrocyte
@@ -101,7 +101,7 @@ proc chooseRandomLocationForIntGapJuncPointer() { local _connectionPoint, maxRad
     _connectionPoint = $2
     maxRadiusForIntGapJuncs = $3
     
-    if (!isAstrocyteOrNeuron) {
+    if (isNeuron()) {
         codeContractViolation()
     }
     

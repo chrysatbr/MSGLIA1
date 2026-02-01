@@ -9,7 +9,7 @@ objref vBoxIClampPPGM, vBoxSEClampPPGM
 
 sourcePythonCode("\\PythonCode", "from SimABCs import *", _thisFileName)
 
-if (isAstrocyteOrNeuron) {
+if (isGlialCell()) {
     load_file("Sims/Astrocyte/SimCalciumDynamics.hoc")
 } else {
     load_file("Sims/Neuron/SimVoltageCA1Neuron.hoc")

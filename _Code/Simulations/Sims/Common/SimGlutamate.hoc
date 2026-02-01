@@ -1,6 +1,11 @@
 
 proc GluIteration() { codeContractViolation() }
 
+// Local function for 2D distance squared calculation
+func _glu_dist2D_squared() {
+    return ($1 - $3)^2 + ($2 - $4)^2
+}
+
 begintemplate SimGlutamate
     
     public preShowCheck, show, advance, simDismissHandler
@@ -221,7 +226,7 @@ proc GluIteration() { local tau1, tau2
     tau2 = $9
     InitialGlutamateConcentration = 20e-6
     forall {
-        if (( (geomMath.dist2D_PtToPt_squared($1, $2, x3d(1), y3d(1))  < $3^2) || (geomMath.dist2D_PtToPt_squared($1+$7, $2, x3d(1), y3d(1))  < $3^2))  && (abs($10-z3d(1)) < 10) && (t > $4)) {
+        if (( (_glu_dist2D_squared($1, $2, x3d(1), y3d(1))  < $3^2) || (_glu_dist2D_squared($1+$7, $2, x3d(1), y3d(1))  < $3^2))  && (abs($10-z3d(1)) < 10) && (t > $4)) {
             gluo = InitialGlutamateConcentration + $6*(tau2/(tau2-tau1)*(-exp(-(t-$4)/tau1) + exp(-(t-$4)/tau2)))
         } else  {
             gluo = InitialGlutamateConcentration
