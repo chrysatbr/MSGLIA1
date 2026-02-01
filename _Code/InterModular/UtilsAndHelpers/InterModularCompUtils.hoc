@@ -4,7 +4,7 @@ begintemplate InterModularCompUtils
     public makeSureAllCompsCreatedOrImportedAndRescanned, getNumDistMechComps, getAllDistMechCompNames, getReservedNanoDistMechCompNames, findDistMechCompByName, getComp
     
     external mmAllComps, gjmAllGapJuncSets, smAllSynSets
-    external isAstrocyteOrNeuron
+    external isAstrocyteOrNeuron, isAstrocyte, isMicroglia, isNeuron, isGlialCell
     external makeSureGapJuncSetsCreatedOrImported, makeSureSynSetsCreatedOrImported, stringsEqual, codeContractViolation
     external mmIcrHelper
     external eachItemInList
@@ -14,7 +14,7 @@ begintemplate InterModularCompUtils
     proc makeSureAllCompsCreatedOrImportedAndRescanned() {
         mmIcrHelper.makeSureMechCompsCreatedOrImportedAndRescanned()
         makeSureGapJuncSetsCreatedOrImported()
-        if (!isAstrocyteOrNeuron) {
+        if (isNeuron()) {
             makeSureSynSetsCreatedOrImported()
         }
     }
@@ -35,9 +35,14 @@ begintemplate InterModularCompUtils
     obfunc getReservedNanoDistMechCompNames() { localobj compNames
         compNames = new List()
         // It's a code contract that the order of names below cooresponds to nanoProximal_ref and then nanoDistal_ref
-        if (isAstrocyteOrNeuron) {
-            compNames.append(new String("Small Glia"))
-            compNames.append(new String("Large Glia"))
+        if (isGlialCell()) {
+            if (isMicroglia()) {
+                compNames.append(new String("Secondary Branch"))
+                compNames.append(new String("Primary Process"))
+            } else {
+                compNames.append(new String("Small Glia"))
+                compNames.append(new String("Large Glia"))
+            }
         } else {
             compNames.append(new String("Spine Neck"))
             compNames.append(new String("Spine Head"))

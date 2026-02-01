@@ -1,6 +1,6 @@
 
 proc getCellTypeName() {
-    if (isAstrocyteOrNeuron) {
+    if (isGlialCell()) {
         $s1 = "Astrocyte"
     } else {
         $s1 = "Neuron"
