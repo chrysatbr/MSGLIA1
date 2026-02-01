@@ -1,4 +1,7 @@
 
+// Load cell type constants FIRST (before any other code that uses them)
+{ load_file("_Code/CellTypeConstants.hoc") }
+
 // User choices made with "Roadmap" widget
 isBaseOrNanoStart = -1      // 1 - base, 0 - nano
 isAstrocyteOrNeuron = -1    // 1 - astrocyte, 0 - neuron
@@ -37,7 +40,9 @@ proc roadmapChosenHandler() { local isLoaded localobj pwm, nil
     
     if (isBaseOrNanoStart) {
         load_file("_Code/Import/ImportBaseGeometry/Import.hoc")
-        if (isAstrocyteOrNeuron) {
+        if (cellType == CELL_TYPE_MICROGLIA) {
+            load_file("_Code/Prologue/Microglia/initMicroglia.hoc")     // This will call prologueCompleteHandler() in the end
+        } else if (cellType == CELL_TYPE_ASTROCYTE) {
             load_file("_Code/Prologue/Astrocyte/initAstrocyte.hoc")     // This will call prologueCompleteHandler() in the end
         } else {
             load_file("_Code/Prologue/Neuron/initNeuron.hoc")
@@ -61,6 +66,8 @@ proc roadmapChosenHandler() { local isLoaded localobj pwm, nil
 
 { load_file("_Code/RoadmapWidget.hoc") }
 
+objref roadmapWidget, microgliaTypeSelector
+
 proc showRoadmapWidget() { localobj pwm, roadmapWidgetCopy
     
     // We'll use a bit higher scale for the very first widget
@@ -72,6 +79,14 @@ proc showRoadmapWidget() { localobj pwm, roadmapWidgetCopy
     
     roadmapWidget = new RoadmapWidget()
     roadmapWidget.show()
+}
+
+proc showMicrogliaTypeSelector() { localobj pwm
+    pwm = PWManager[0]
+    pwm.scale(1)
+    
+    microgliaTypeSelector = new MicrogliaTypeSelector()
+    microgliaTypeSelector.show()
 }
 
 // Don't rename this proc to "init" because NEURON will call it once user clicks "Init & Run"
