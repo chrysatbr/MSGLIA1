@@ -2,12 +2,13 @@
 // The next "declarations" are needed just to bind the template external-s at the file sourcing time
 obfunc createNeuronNanoBranch() { codeContractViolation() }
 obfunc createAstrocyteNanoBranch() { codeContractViolation() }
+obfunc createMicrogliaNanoBranch() { codeContractViolation() }
 
 { load_file("../Managers/CommonLoads.hoc") }
 { load_file("../Managers/GapJuncManager/GapJuncManager.hoc") }
 
 obfunc createDefaultSynSets() { codeContractViolation() }
-if (!isAstrocyteOrNeuron) {
+if (isNeuron()) {
     load_file("../Managers/SynManager/SynManager.hoc")
 }
 
@@ -19,9 +20,11 @@ NumberNanoBranches = -1
 
 { load_file("Exported/CreateNanoRefs_Exported_deprecated.hoc") }
 
-if (isAstrocyteOrNeuron) {
+if (isAstrocyte()) {
     load_file("Astrocyte/AstrocyteNanoBranch.hoc")
-} else {
+} else if (isMicroglia()) {
+    load_file("Microglia/MicrogliaNanoBranch.hoc")
+} else if (isNeuron()) {
     load_file("Neuron/NeuronNanoBranch.hoc")
 }
 
@@ -42,11 +45,12 @@ begintemplate NanoBranchesManager
     
     external seededDendrite_ref, NumberNanoBranches
     external isAstrocyteOrNeuron, isFirstReseeding
+    external isAstrocyte, isMicroglia, isNeuron, isGlialCell
     external mwh, rngUtils, math, nanoGeomSeedingDensityHelper
     external eachRandomlySeededSlotInSecList, eachItemInList
     external manageAndRunWidget
     
-    external createAstrocyteNanoBranch, createNeuronNanoBranch, createRefsForNanoGeometry_deprecated
+    external createAstrocyteNanoBranch, createMicrogliaNanoBranch, createNeuronNanoBranch, createRefsForNanoGeometry_deprecated
     external gjmAllGapJuncSets, spmAllSpineSets, smAllSynSets
     external createDefaultGapJuncSets, createDefaultSynSets, initVoltage
     
@@ -93,11 +97,13 @@ begintemplate NanoBranchesManager
                 deleteBranches()
             }
             
-            if (isAstrocyteOrNeuron) {
+            if (isGlialCell()) {
+                // Astrocyte and Microglia use random seeding on dendrites
                 for eachRandomlySeededSlotInSecList(&connectionPoint, seededDendrite_ref, maxNumBranchesPerDend, nanoGeomSeedingDensityHelper, randomBranchSeeder, 1) {
                     createInitAndConnectOneBranch(connectionPoint, args)
                 }
             } else {
+                // Neuron uses spine sets
                 for eachItemInList(spineSet, spmAllSpineSets) {
                     spineNecks_ref = new List()
                     spineHeads_ref = new List()
@@ -117,7 +123,7 @@ begintemplate NanoBranchesManager
             
             gjmAllGapJuncSets = createDefaultGapJuncSets()
             
-            if (!isAstrocyteOrNeuron) {
+            if (isNeuron()) {
                 smAllSynSets = createDefaultSynSets()
             }
             
@@ -133,8 +139,10 @@ begintemplate NanoBranchesManager
         isFirstReseeding = 0
         NumberNanoBranches = nanoBranches_flat.count()
         
-        if (isAstrocyteOrNeuron) {
+        if (isAstrocyte()) {
             what = "stalks"
+        } else if (isMicroglia()) {
+            what = "processes"
         } else {
             what = "spines"
         }
@@ -160,7 +168,7 @@ begintemplate NanoBranchesManager
             nanoBranch.update(args)
         }
         
-        if (!isAstrocyteOrNeuron) {
+        if (isNeuron()) {
             for eachItemInList(synSet, smAllSynSets) {
                 synSet.spineNeckDiamCache.cacheAllDiams()
             }
@@ -173,7 +181,7 @@ begintemplate NanoBranchesManager
         // !! would it make sense to delete only a subset of gap juncs located on or connected to the deleted nanogeometry?
         removeAllTapSets(gjmAllGapJuncSets)
         
-        if (!isAstrocyteOrNeuron) {
+        if (isNeuron()) {
             removeAllTapSets(smAllSynSets)
         }
         
@@ -196,8 +204,10 @@ begintemplate NanoBranchesManager
         args = $o2
         
         // Create and initialize one branch (sections, topology, geometry, biophysics)
-        if (isAstrocyteOrNeuron) {
+        if (isAstrocyte()) {
             newBranch = createAstrocyteNanoBranch(args)
+        } else if (isMicroglia()) {
+            newBranch = createMicrogliaNanoBranch(args)
         } else {
             newBranch = createNeuronNanoBranch(args)
         }

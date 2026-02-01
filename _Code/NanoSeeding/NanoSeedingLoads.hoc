@@ -1,7 +1,7 @@
 
 { load_file("../Managers/SeedingDensityHelper.hoc") }
 
-if (isAstrocyteOrNeuron) {
+if (isGlialCell()) {
     load_file("Astrocyte/SectionListUtils_deprecated.hoc")
     load_file("Astrocyte/Widgets/SeededDendritesWidget_deprecated.hoc")
 } else {

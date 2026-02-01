@@ -1,0 +1,212 @@
+
+// This one will be shared by different microglia nano branches
+objref randomDiamAndLen_mg
+randomDiamAndLen_mg = rngUtils.getFor_nano_diamAndLen()
+
+// Primary processes (like Astrocyte LargeGlia/Leaves):
+MinDimProcess = 0.3                             // um
+MaxDimProcess = 0.8                             // um
+MinLenProcess = 0.1                             // um
+MaxLenProcess = 0.12                            // um
+GPassive_mg = 0.0001                            // S/cm2 = mho/cm2
+
+// Secondary branches (like Astrocyte SmallGlia/Stalks):
+MinDimBranch = 0.1                              // um
+MaxDimBranch = 0.5                              // um
+MinLenBranch = 0.1                              // um
+MaxLenBranch = 0.3                              // um
+
+minDiam = capDiam(0)
+minLen = 1e-4       // Chosen to avoid multiple warnings of type "nrn_define_shape: MicrogliaNanoBranch[*].PrimaryProcess[*] first and last 3-d point at same (x,y)"
+
+setUpExposedLengthVar("MinDimProcess", minDiam)
+setUpExposedLengthVar("MaxDimProcess", minDiam)
+setUpExposedLengthVar("MinLenProcess", minLen)
+setUpExposedLengthVar("MaxLenProcess", minLen)
+setUpExposedLengthVar("MinDimBranch", minDiam)
+setUpExposedLengthVar("MaxDimBranch", minDiam)
+setUpExposedLengthVar("MinLenBranch", minLen)
+setUpExposedLengthVar("MaxLenBranch", minLen)
+
+inf = math.inf
+{ variable_domain(&GPassive_mg, 0, inf) }
+{ units(&GPassive_mg, units("g_pas")) }
+
+
+begintemplate MicrogliaNanoBranch
+    
+    public PrimaryProcess, SecondaryBranch
+    
+    objref root_ref     // SectionRef
+    public root_ref
+    
+    // The second public proc (the first one is init)
+    public update
+    
+    // Both processes and branches:
+    external NumberLeavesPerStalk, randomDiamAndLen_mg, diamStep
+    // Processes only (like leaves):
+    external MinDimProcess, MaxDimProcess, MinLenProcess, MaxLenProcess, diamDistrLeaves
+    // Branches only (like stalks):
+    external MinDimBranch, MaxDimBranch, MinLenBranch, MaxLenBranch, diamDistrStalks
+    
+    // func/proc
+    external getDiameterFromDistr, capDiam, codeContractViolation
+    
+    // Scalars
+    external GPassive_mg
+    
+    // This works just like a declaration of arrays, and we'll define them in proc init()
+    create PrimaryProcess[1]
+    create SecondaryBranch[1]
+    
+    
+    proc init() { local isProcessDiamDistrFromFileOrUniform, isBranchDiamDistrFromFileOrUniform localobj args
+        args = $o1
+        
+        if (args.size() != 2) {
+            codeContractViolation()
+        }
+        isProcessDiamDistrFromFileOrUniform = args.x[0]
+        isBranchDiamDistrFromFileOrUniform = args.x[1]
+        
+        create PrimaryProcess[NumberLeavesPerStalk]
+        create SecondaryBranch[NumberLeavesPerStalk]
+        
+        initTopology()
+        initGeometry(isProcessDiamDistrFromFileOrUniform, isBranchDiamDistrFromFileOrUniform)
+        initBiophysics()
+        
+        PrimaryProcess[0] {
+            root_ref = new SectionRef()
+        }
+    }
+    
+    proc update() { local isProcessOrBranch, isBiophysOnly, isDiamDistrFromFileOrUniform, isUpdateProcess, isUpdateBranch localobj args
+        args = $o1
+        
+        if (args.size() != 3) {
+            codeContractViolation()
+        }
+        isProcessOrBranch = args.x[0]
+        isBiophysOnly = args.x[1]
+        isDiamDistrFromFileOrUniform = args.x[2]
+        
+        isUpdateProcess = isProcessOrBranch
+        isUpdateBranch = 1 - isProcessOrBranch
+        
+        if (!isBiophysOnly) {
+            updateGeometry(isUpdateProcess, isUpdateBranch, isDiamDistrFromFileOrUniform, isDiamDistrFromFileOrUniform)
+        }
+        updateBiophysics(isUpdateProcess, isUpdateBranch, isDiamDistrFromFileOrUniform, isDiamDistrFromFileOrUniform)
+    }
+    
+    // All next staff is private
+    
+    
+    // Create topology of the branch so that it will have:
+    // * all secondary branches attached
+    // * the topological root at PrimaryProcess[0] (no connection between branch and dendrite yet)
+    proc initTopology() { local idx
+        for idx = 0, NumberLeavesPerStalk - 2 {
+            connect SecondaryBranch[idx](0), PrimaryProcess[idx](1)
+            connect PrimaryProcess[idx + 1](0), SecondaryBranch[idx](1)
+        }
+        connect SecondaryBranch[idx](0), PrimaryProcess[idx](1)    // Here idx equals NumberLeavesPerStalk - 1
+    }
+    
+    proc initGeometry() { local isProcessDiamDistrFromFileOrUniform, isBranchDiamDistrFromFileOrUniform
+        isProcessDiamDistrFromFileOrUniform = $1
+        isBranchDiamDistrFromFileOrUniform = $2
+        updateGeometry(1, 1, isProcessDiamDistrFromFileOrUniform, isBranchDiamDistrFromFileOrUniform)
+    }
+    
+    proc initBiophysics() { local idx
+        for idx = 0, NumberLeavesPerStalk - 1 {
+            PrimaryProcess[idx] {
+                nseg = 1
+                Ra = 100        // Ohm cm
+                cm = 0.8        // uF/cm2
+                
+                insert pas
+                e_pas = -85     // mV
+            }
+            SecondaryBranch[idx] {
+                nseg = 1
+                Ra = 100        // Ohm cm
+                cm = 0.8        // uF/cm2
+                
+                insert pas
+                e_pas = -85     // mV
+            }
+        }
+        
+        updateBiophysics(1, 1)
+    }
+    
+    proc updateGeometry() { local isUpdateProcess, isUpdateBranch, isProcessDiamDistrFromFileOrUniform, isBranchDiamDistrFromFileOrUniform, idx
+        isUpdateProcess = $1
+        isUpdateBranch = $2
+        isProcessDiamDistrFromFileOrUniform = $3
+        isBranchDiamDistrFromFileOrUniform = $4
+        
+        if (!isUpdateProcess && !isUpdateBranch) {
+            codeContractViolation()
+        }
+        
+        for idx = 0, NumberLeavesPerStalk - 1 {
+            if (isUpdateProcess) {
+                PrimaryProcess[idx] {
+                    if (isProcessDiamDistrFromFileOrUniform) {
+                        diam = getDiameterFromDistr(diamDistrLeaves, diamStep)
+                        diam = capDiam(diam)
+                    } else {
+                        diam = randomDiamAndLen_mg.uniform(MinDimProcess, MaxDimProcess)
+                    }
+                    
+                    L = randomDiamAndLen_mg.uniform(MinLenProcess, MaxLenProcess)
+                }
+            }
+            
+            if (isUpdateBranch) {
+                SecondaryBranch[idx] {
+                    if (isBranchDiamDistrFromFileOrUniform) {
+                        diam = getDiameterFromDistr(diamDistrStalks, diamStep)
+                        diam = capDiam(diam)
+                    } else {
+                        diam = randomDiamAndLen_mg.uniform(MinDimBranch, MaxDimBranch)
+                    }
+                    
+                    L = randomDiamAndLen_mg.uniform(MinLenBranch, MaxLenBranch)
+                }
+            }
+        }
+    }
+    
+    proc updateBiophysics() { local isUpdateProcess, isUpdateBranch, idx
+        isUpdateProcess = $1
+        isUpdateBranch = $2     // !! not used
+        
+        if (!isUpdateProcess && !isUpdateBranch) {
+            codeContractViolation()
+        }
+        
+        if (!isUpdateProcess) {
+            return
+        }
+        
+        for idx = 0, NumberLeavesPerStalk - 1 {
+            PrimaryProcess[idx] {
+                g_pas = (1 + diam / (2 * L)) * GPassive_mg
+            }
+        }
+    }
+
+endtemplate MicrogliaNanoBranch
+
+
+obfunc createMicrogliaNanoBranch() {
+    return new MicrogliaNanoBranch($o1)
+}
+
+print "MicrogliaNanoBranch.hoc loaded successfully"

@@ -1,0 +1,240 @@
+/*
+    Microglia State-Dependent Morphometric Parameters
+    ==================================================
+    Default geometric parameters for each microglia activation state.
+    Based on quantitative morphometric literature.
+    
+    References:
+    - Reddaway et al. 2023 (Frontiers in Neuroinformatics)
+    - Torres-Platas et al. 2014 (J Neuroinflammation)
+    - Kongsui et al. 2014 (J Neuroinflammation)
+    - Leyh et al. 2021 (Frontiers Cell Neurosci)
+*/
+
+// ============================================================================
+// RAMIFIED (HOMEOSTATIC) MICROGLIA PARAMETERS
+// ============================================================================
+
+// Soma parameters
+Microglia_Ramified_SomaDiam_Min = 5        // μm
+Microglia_Ramified_SomaDiam_Max = 8        // μm
+
+// Primary process parameters
+Microglia_Ramified_NumPrimaryProc = 6      // count (5-7)
+Microglia_Ramified_PrimaryDiam_Prox = 0.8  // μm (proximal diameter)
+Microglia_Ramified_PrimaryDiam_Dist = 0.3  // μm (distal diameter, tapering)
+Microglia_Ramified_PrimaryLen_Min = 20     // μm
+Microglia_Ramified_PrimaryLen_Max = 30     // μm
+
+// Secondary branch parameters
+Microglia_Ramified_NumSecondary = 8        // per primary process
+Microglia_Ramified_SecondaryDiam_Min = 0.2 // μm
+Microglia_Ramified_SecondaryDiam_Max = 0.5 // μm
+Microglia_Ramified_SecondaryLen_Min = 10   // μm
+Microglia_Ramified_SecondaryLen_Max = 20   // μm
+
+// Biophysics
+Microglia_Ramified_Ra = 100                // Ohm cm
+Microglia_Ramified_cm = 1.0                // μF/cm2
+Microglia_Ramified_gpas = 0.0001           // S/cm2
+Microglia_Ramified_epas = -70              // mV (resting potential)
+
+
+// ============================================================================
+// HYPER-RAMIFIED (BUSHY) MICROGLIA PARAMETERS
+// ============================================================================
+
+// Soma parameters
+Microglia_HyperRamified_SomaDiam_Min = 6   // μm
+Microglia_HyperRamified_SomaDiam_Max = 10  // μm
+
+// Primary process parameters
+Microglia_HyperRamified_NumPrimaryProc = 7
+Microglia_HyperRamified_PrimaryDiam_Prox = 1.0
+Microglia_HyperRamified_PrimaryDiam_Dist = 0.4
+Microglia_HyperRamified_PrimaryLen_Min = 25
+Microglia_HyperRamified_PrimaryLen_Max = 40
+
+// Secondary branch parameters
+Microglia_HyperRamified_NumSecondary = 12
+Microglia_HyperRamified_SecondaryDiam_Min = 0.3
+Microglia_HyperRamified_SecondaryDiam_Max = 0.6
+Microglia_HyperRamified_SecondaryLen_Min = 15
+Microglia_HyperRamified_SecondaryLen_Max = 25
+
+// Biophysics
+Microglia_HyperRamified_Ra = 100
+Microglia_HyperRamified_cm = 1.0
+Microglia_HyperRamified_gpas = 0.00012
+Microglia_HyperRamified_epas = -65
+
+
+// ============================================================================
+// REACTIVE (ACTIVATED) MICROGLIA PARAMETERS
+// ============================================================================
+
+// Soma parameters
+Microglia_Reactive_SomaDiam_Min = 10       // μm
+Microglia_Reactive_SomaDiam_Max = 15       // μm
+
+// Primary process parameters
+Microglia_Reactive_NumPrimaryProc = 4
+Microglia_Reactive_PrimaryDiam_Prox = 1.5
+Microglia_Reactive_PrimaryDiam_Dist = 0.8
+Microglia_Reactive_PrimaryLen_Min = 10
+Microglia_Reactive_PrimaryLen_Max = 20
+
+// Secondary branch parameters
+Microglia_Reactive_NumSecondary = 3
+Microglia_Reactive_SecondaryDiam_Min = 0.5
+Microglia_Reactive_SecondaryDiam_Max = 1.0
+Microglia_Reactive_SecondaryLen_Min = 5
+Microglia_Reactive_SecondaryLen_Max = 12
+
+// Biophysics
+Microglia_Reactive_Ra = 80
+Microglia_Reactive_cm = 1.0
+Microglia_Reactive_gpas = 0.00015
+Microglia_Reactive_epas = -55
+
+
+// ============================================================================
+// AMOEBOID MICROGLIA PARAMETERS
+// ============================================================================
+
+// Soma parameters
+Microglia_Amoeboid_SomaDiam_Min = 15       // μm
+Microglia_Amoeboid_SomaDiam_Max = 20       // μm
+
+// Primary process parameters (minimal or none)
+Microglia_Amoeboid_NumPrimaryProc = 1      // 0-2
+Microglia_Amoeboid_PrimaryDiam_Prox = 2.0
+Microglia_Amoeboid_PrimaryDiam_Dist = 1.5
+Microglia_Amoeboid_PrimaryLen_Min = 2
+Microglia_Amoeboid_PrimaryLen_Max = 8
+
+// Secondary branch parameters (essentially none)
+Microglia_Amoeboid_NumSecondary = 0
+Microglia_Amoeboid_SecondaryDiam_Min = 1.0
+Microglia_Amoeboid_SecondaryDiam_Max = 1.5
+Microglia_Amoeboid_SecondaryLen_Min = 2
+Microglia_Amoeboid_SecondaryLen_Max = 5
+
+// Biophysics
+Microglia_Amoeboid_Ra = 80
+Microglia_Amoeboid_cm = 1.0
+Microglia_Amoeboid_gpas = 0.0002
+Microglia_Amoeboid_epas = -45
+
+
+// ============================================================================
+// CURRENT WORKING PARAMETERS (set by microglia type selection)
+// ============================================================================
+
+// These are the active parameters used by MicrogliaNanoBranch template
+// They get set based on microgliaType selection
+
+MG_SomaDiam_Min = 5
+MG_SomaDiam_Max = 8
+MG_NumPrimaryProc = 6
+MG_PrimaryDiam_Prox = 0.8
+MG_PrimaryDiam_Dist = 0.3
+MG_PrimaryLen_Min = 20
+MG_PrimaryLen_Max = 30
+MG_NumSecondary = 8
+MG_SecondaryDiam_Min = 0.2
+MG_SecondaryDiam_Max = 0.5
+MG_SecondaryLen_Min = 10
+MG_SecondaryLen_Max = 20
+MG_Ra = 100
+MG_cm = 1.0
+MG_gpas = 0.0001
+MG_epas = -70
+
+
+// ============================================================================
+// PARAMETER SETTER FUNCTION
+// ============================================================================
+
+proc setMicrogliaParametersByType() { local mgType
+    mgType = $1
+    
+    if (mgType == 1) {  // RAMIFIED
+        MG_SomaDiam_Min = Microglia_Ramified_SomaDiam_Min
+        MG_SomaDiam_Max = Microglia_Ramified_SomaDiam_Max
+        MG_NumPrimaryProc = Microglia_Ramified_NumPrimaryProc
+        MG_PrimaryDiam_Prox = Microglia_Ramified_PrimaryDiam_Prox
+        MG_PrimaryDiam_Dist = Microglia_Ramified_PrimaryDiam_Dist
+        MG_PrimaryLen_Min = Microglia_Ramified_PrimaryLen_Min
+        MG_PrimaryLen_Max = Microglia_Ramified_PrimaryLen_Max
+        MG_NumSecondary = Microglia_Ramified_NumSecondary
+        MG_SecondaryDiam_Min = Microglia_Ramified_SecondaryDiam_Min
+        MG_SecondaryDiam_Max = Microglia_Ramified_SecondaryDiam_Max
+        MG_SecondaryLen_Min = Microglia_Ramified_SecondaryLen_Min
+        MG_SecondaryLen_Max = Microglia_Ramified_SecondaryLen_Max
+        MG_Ra = Microglia_Ramified_Ra
+        MG_cm = Microglia_Ramified_cm
+        MG_gpas = Microglia_Ramified_gpas
+        MG_epas = Microglia_Ramified_epas
+        
+    } else if (mgType == 2) {  // HYPER-RAMIFIED
+        MG_SomaDiam_Min = Microglia_HyperRamified_SomaDiam_Min
+        MG_SomaDiam_Max = Microglia_HyperRamified_SomaDiam_Max
+        MG_NumPrimaryProc = Microglia_HyperRamified_NumPrimaryProc
+        MG_PrimaryDiam_Prox = Microglia_HyperRamified_PrimaryDiam_Prox
+        MG_PrimaryDiam_Dist = Microglia_HyperRamified_PrimaryDiam_Dist
+        MG_PrimaryLen_Min = Microglia_HyperRamified_PrimaryLen_Min
+        MG_PrimaryLen_Max = Microglia_HyperRamified_PrimaryLen_Max
+        MG_NumSecondary = Microglia_HyperRamified_NumSecondary
+        MG_SecondaryDiam_Min = Microglia_HyperRamified_SecondaryDiam_Min
+        MG_SecondaryDiam_Max = Microglia_HyperRamified_SecondaryDiam_Max
+        MG_SecondaryLen_Min = Microglia_HyperRamified_SecondaryLen_Min
+        MG_SecondaryLen_Max = Microglia_HyperRamified_SecondaryLen_Max
+        MG_Ra = Microglia_HyperRamified_Ra
+        MG_cm = Microglia_HyperRamified_cm
+        MG_gpas = Microglia_HyperRamified_gpas
+        MG_epas = Microglia_HyperRamified_epas
+        
+    } else if (mgType == 3) {  // REACTIVE
+        MG_SomaDiam_Min = Microglia_Reactive_SomaDiam_Min
+        MG_SomaDiam_Max = Microglia_Reactive_SomaDiam_Max
+        MG_NumPrimaryProc = Microglia_Reactive_NumPrimaryProc
+        MG_PrimaryDiam_Prox = Microglia_Reactive_PrimaryDiam_Prox
+        MG_PrimaryDiam_Dist = Microglia_Reactive_PrimaryDiam_Dist
+        MG_PrimaryLen_Min = Microglia_Reactive_PrimaryLen_Min
+        MG_PrimaryLen_Max = Microglia_Reactive_PrimaryLen_Max
+        MG_NumSecondary = Microglia_Reactive_NumSecondary
+        MG_SecondaryDiam_Min = Microglia_Reactive_SecondaryDiam_Min
+        MG_SecondaryDiam_Max = Microglia_Reactive_SecondaryDiam_Max
+        MG_SecondaryLen_Min = Microglia_Reactive_SecondaryLen_Min
+        MG_SecondaryLen_Max = Microglia_Reactive_SecondaryLen_Max
+        MG_Ra = Microglia_Reactive_Ra
+        MG_cm = Microglia_Reactive_cm
+        MG_gpas = Microglia_Reactive_gpas
+        MG_epas = Microglia_Reactive_epas
+        
+    } else if (mgType == 4) {  // AMOEBOID
+        MG_SomaDiam_Min = Microglia_Amoeboid_SomaDiam_Min
+        MG_SomaDiam_Max = Microglia_Amoeboid_SomaDiam_Max
+        MG_NumPrimaryProc = Microglia_Amoeboid_NumPrimaryProc
+        MG_PrimaryDiam_Prox = Microglia_Amoeboid_PrimaryDiam_Prox
+        MG_PrimaryDiam_Dist = Microglia_Amoeboid_PrimaryDiam_Dist
+        MG_PrimaryLen_Min = Microglia_Amoeboid_PrimaryLen_Min
+        MG_PrimaryLen_Max = Microglia_Amoeboid_PrimaryLen_Max
+        MG_NumSecondary = Microglia_Amoeboid_NumSecondary
+        MG_SecondaryDiam_Min = Microglia_Amoeboid_SecondaryDiam_Min
+        MG_SecondaryDiam_Max = Microglia_Amoeboid_SecondaryDiam_Max
+        MG_SecondaryLen_Min = Microglia_Amoeboid_SecondaryLen_Min
+        MG_SecondaryLen_Max = Microglia_Amoeboid_SecondaryLen_Max
+        MG_Ra = Microglia_Amoeboid_Ra
+        MG_cm = Microglia_Amoeboid_cm
+        MG_gpas = Microglia_Amoeboid_gpas
+        MG_epas = Microglia_Amoeboid_epas
+    }
+    
+    printf("Microglia parameters set for type %d\n", mgType)
+    printf("  Soma: %.1f-%.1f μm, Primary processes: %d\n", MG_SomaDiam_Min, MG_SomaDiam_Max, MG_NumPrimaryProc)
+    printf("  Secondary branches per process: %d\n", MG_NumSecondary)
+}
+
+print "MicrogliaStateParameters.hoc loaded successfully"

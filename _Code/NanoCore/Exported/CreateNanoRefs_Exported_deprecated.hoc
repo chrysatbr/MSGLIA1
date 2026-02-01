@@ -10,9 +10,14 @@ proc createRefsForNanoGeometry_deprecated() {
     nanoProximal_ref = new List()
     nanoDistal_ref = new List()
     
-    if (isAstrocyteOrNeuron) {
-        nanoProximal_ref = createListOfSectionRefs("SmallGlia[.*", 1)
-        nanoDistal_ref = createListOfSectionRefs("LargeGlia[.*", 1)
+    if (isGlialCell()) {
+        if (isMicroglia()) {
+            nanoProximal_ref = createListOfSectionRefs("SecondaryBranch[.*", 1)
+            nanoDistal_ref = createListOfSectionRefs("PrimaryProcess[.*", 1)
+        } else {
+            nanoProximal_ref = createListOfSectionRefs("SmallGlia[.*", 1)
+            nanoDistal_ref = createListOfSectionRefs("LargeGlia[.*", 1)
+        }
     } else {
         nanoProximal_ref = createListOfSectionRefs("spine_neck", 1)
         nanoDistal_ref = createListOfSectionRefs("spine_head", 1)
