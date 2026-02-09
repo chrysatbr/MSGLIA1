@@ -1,4 +1,4 @@
-{ load_file("C:/Users/tsimp/msglia2/_Code/CellTypeConstants.hoc") }
+{ load_file("_Code/CellTypeConstants.hoc") }
 { load_file("UtilsAndHelpers/InterModularErrWarnUtils.hoc") }
 { load_file("UtilsAndHelpers/PrerequisitesCheck.hoc") }
 checkPrerequisites()
