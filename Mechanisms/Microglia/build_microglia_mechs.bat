@@ -1,9 +1,24 @@
 @echo off
-REM Build script for Microglia-specific NEURON mechanisms
-REM Run this from the Mechanisms/Microglia directory
+set modFilesFolderName=MOD_files
+set tempFolderName=temp_folder
 
-echo Building Microglia mechanisms...
-cd MOD_files
-nrnivmodl
-echo Done!
+if exist %tempFolderName% (
+    rmdir %tempFolderName% /S /Q
+)
+mkdir %tempFolderName%
+cd %tempFolderName%
+echo.
+xcopy "..\%modFilesFolderName%\*" /Q
+echo.
+echo     Building Microglia mechs ...
+echo.
+call "%NEURONHOME%\bin\mknrndll.bat"
+echo.
+copy nrnmech.dll "..\..\..\Nanogeometry\Microglia\" 2>nul
+move nrnmech.dll "..\"
+echo.
+if errorlevel 1 goto label1
+    cd ..
+    rmdir %tempFolderName% /S /Q
+:label1
 pause

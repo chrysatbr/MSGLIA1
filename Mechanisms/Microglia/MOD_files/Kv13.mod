@@ -22,7 +22,7 @@ PARAMETER {
     gkbar = 0.001 (S/cm2)     : Maximum conductance
     
     : Activation parameters (from patch clamp data)
-    vhalf_n = -37 (mV)        : Half-activation voltage
+    vhalf_n = -27 (mV)        : Half-activation voltage
     k_n = 7 (mV)              : Slope factor
     
     : Inactivation parameters (C-type inactivation)
