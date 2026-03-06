@@ -11,7 +11,7 @@ begintemplate SimulationManager
     public simCatIdx, programmaticClick
     
     external isAstrocyteOrNeuron, isAstrocyte, isMicroglia, isNeuron, isGlialCell
-    external InsertElectricMechanisms, InsertGlutamateMechanisms, InsertPotassiumMechanisms, InsertPiezo1Mechanisms, InsertPiezo2Mechanisms, InsertTNFaMechanisms, InsertIL1bMechanisms, InsertIL6Mechanisms, InsertTRPV4Mechanisms, InsertTRPA1Mechanisms
+    external InsertElectricMechanisms, InsertGlutamateMechanisms, InsertPotassiumMechanisms, InsertPiezo1Mechanisms, InsertPiezo2Mechanisms, InsertTNFaMechanisms, InsertIL1bMechanisms, InsertIL6Mechanisms, InsertTRPV4Mechanisms, InsertTRPA1Mechanisms, InsertFUSMechanisms
     external showIntegratesWithAltRunControlMsg, deployDefaultProcAdvance, deployCustomProcAdvance, stringEmpty, dismissIfNotNil, codeContractViolation
     external mainUiLocker, mmIcrHelper, beih, mwh, pyObj
     external altRunControlWidget, iodManagerMainWidget, extraCellsManagerWidget
@@ -33,7 +33,7 @@ begintemplate SimulationManager
     
     proc init() { local numSims
         
-        numSims = 22
+        numSims = 25
         
         objref simIdxToWidget[numSims]
         if (isNeuron()) {
@@ -61,12 +61,15 @@ begintemplate SimulationManager
 	simIdxToWidget[18] = new SimPiezo2()
 	simIdxToWidget[19] = new SimTRPA1()
 	
-
+	 // Focused Ultrasound Stimulation simulations
+        simIdxToWidget[20] = new SimFUSSinglePulse()
+        simIdxToWidget[21] = new SimFUSPulsed()
+        simIdxToWidget[22] = new SimFUSContinuous()
 	
 	
         
 	if (isNeuron()) {
-            simIdxToWidget[21] = pyObj.SimMyelinatedAxon()
+            simIdxToWidget[23] = pyObj.SimMyelinatedAxon()
         }
         
         simCatIdx = 0
@@ -160,7 +163,7 @@ begintemplate SimulationManager
             insertSpacer()
             if (isNeuron()) {
                 xlabel("Axon model with myelin sheath and K+ radial diffusion")
-                createSimStateButton("Axon simulation", 21)
+                createSimStateButton("Axon simulation", 23)
                 insertSpacer()
             }
            xpanel()
@@ -188,17 +191,27 @@ begintemplate SimulationManager
 	   xlabel("Interleukin-6 (IL6) - Activates IL10")  
 	   createSimStateButton("IL6 cytokine dynamics", 17)  
 	   
-
 	   xpanel()
+           // ── Category 7: Focused Ultrasound Stimulation ──
            xpanel("")
-           xlabel("FUS")
-           createSimStateButton("Dynamics of FUS channel", 6)
+           xlabel("============ Focused Ultrasound Stimulation ============")
+           xlabel("")
+           xlabel("Single acoustic pulse applied to the cell.")
+           xlabel("Use for basic FUS response characterization.")
+           createSimStateButton("Single-Pulse FUS", 20)
            insertSpacer()
-           xlabel("FUS mechanosensitive channel")
-           createSimStateButton("Dynamics of FUS channel", 7)
-	   insertSpacer()
+           xlabel("Repeated pulses at specified PRF and duty cycle.")
+           xlabel("Theta-burst and standard pulsed protocols.")
+           createSimStateButton("Pulsed FUS (PRF)", 21)
+           insertSpacer()
+           xlabel("Sustained acoustic stimulation (use lower pressure).")
+           xlabel("Includes thermal safety estimation.")
+           createSimStateButton("Continuous FUS", 22)
+          
+          
 	   xpanel()
-            }
+        }
+
 
         deck.intercept(0)
         // deck.flip_to(*)      // Will be done below in simCatChangedHandler
@@ -371,7 +384,10 @@ begintemplate SimulationManager
         }else if (simIdx == 19) {  
             InsertTRPA1Mechanisms()
             isRescanRequired = 1
-        }
+        } else if (simIdx == 20 || simIdx == 21 || simIdx == 22) {
+            InsertFUSMechanisms()
+            isRescanRequired = 1
+	}
         
 
         
@@ -397,7 +413,7 @@ begintemplate SimulationManager
         {
             widget.show(simIdxToIsFirstShow.x[simIdx])
             simIdxToIsFirstShow.x[simIdx] = 0
-            
+            2
             if (widget.isAltRunControl) {
                 showIntegratesWithAltRunControlMsg("simulation")
             }

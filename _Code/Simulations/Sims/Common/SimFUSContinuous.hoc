@@ -1,0 +1,574 @@
+// SimFUSContinuous.hoc - Continuous-wave FUS, unified panel
+
+proc FUSContinuousSetEnvelope() { }
+proc FUSContinuousApplyForces() { }
+proc ensureCalciumDynamics() { }
+proc pushIcaToCadifus() { }
+FUS_ica_scale = 1
+FUS_cumulative_temp_rise = 0
+
+FUS_ramp_ms = 0.3
+FUS_kp_piezo = 4.0
+FUS_kp_trpv4 = 3.0
+FUS_kp_trpa1 = 8.0
+FUS_shape_Tmin = 0
+FUS_shape_Tmax = 10
+FUS_shape_Vmin = -80
+FUS_shape_Vmax = 40
+
+func FUS_RampEnvelope() { local t_rel, dur, ramp, total
+    t_rel = $1  dur = $2  ramp = $3
+    total = dur + 2 * ramp
+    if (t_rel < 0 || t_rel > total) { return 0 }
+    if (t_rel < ramp) {
+        if (ramp > 0) { return 0.5 * (1 - cos(3.14159265 * t_rel / ramp)) }
+        return 1
+    }
+    if (t_rel <= ramp + dur) { return 1 }
+    if (ramp > 0) { return 0.5 * (1 + cos(3.14159265 * (t_rel - ramp - dur) / ramp)) }
+    return 0
+}
+
+
+FUS_diag_imech = 0
+FUS_diag_delta_ca = 0
+FUS_imech_baseline = 0
+FUS_diag_ipiezo1_soma = 0
+FUS_diag_ipiezo2_soma = 0
+FUS_diag_itrpv4_soma = 0
+FUS_diag_itrpa1_soma = 0
+
+begintemplate SimFUSContinuous
+
+    public preShowCheck, show, preRun, preContinue, advance, postRun, simDismissHandler
+    public biophysJsonFileNameOrEmpty, isCustomProcAdvance, isAltRunControl
+
+    public FUS_freq, FUS_pressure, FUS_duration
+    public FUS_focal_length, FUS_aperture_diam
+    public FUS_x_focus, FUS_y_focus, FUS_z_focus
+    public FUS_attenuation, FUS_speed_of_sound, FUS_tissue_density, FUS_specific_heat
+    public FUS_wavelength_mm, FUS_f_number
+    public FUS_fwhm_lat_amp_mm, FUS_fwhm_ax_amp_mm
+    public FUS_fwhm_lat_int_mm, FUS_fwhm_ax_int_mm
+    public FUS_temp_rise, FUS_intensity_ISPTA, FUS_mech_index
+
+    external FUSContinuousSetEnvelope, FUSContinuousApplyForces
+    external FUS_ramp_ms, FUS_RampEnvelope
+    external FUS_cumulative_temp_rise
+    external FUS_kp_piezo, FUS_kp_trpv4, FUS_kp_trpa1
+    external ensureCalciumDynamics, pushIcaToCadifus
+    external FUS_diag_imech, FUS_diag_delta_ca, FUS_imech_baseline
+    external FUS_diag_ipiezo1_soma, FUS_diag_ipiezo2_soma, FUS_diag_itrpv4_soma, FUS_diag_itrpa1_soma
+    external FUS_shape_Tmin, FUS_shape_Tmax, FUS_shape_Vmin, FUS_shape_Vmax
+
+    external seClampHelper, altRunControlWidget, tstop
+    external removeItemFromList, unmapIfNotNil
+    external dendrite_ref, soma_ref
+    external graphList, fast_flush_list
+
+    strdef biophysJsonFileNameOrEmpty
+    isCustomProcAdvance = -1
+    isAltRunControl = -1
+    strdef outTxtFileRelPathName
+
+    objref mainBox
+    objref rightVBox
+    objref graphPressure, graphVoltage
+    objref graphTension, graphCalcium
+    objref graphMechI, graphIca, graphTempRise
+    public plotShapePressure, plotShapeTension2, plotShapeVm
+    objref plotShapePressure, plotShapeTension2, plotShapeVm
+    objref fileFUSResults
+
+    proc init() {
+        biophysJsonFileNameOrEmpty = ""
+        isCustomProcAdvance = 1
+        isAltRunControl = 1
+        outTxtFileRelPathName = "Text results/FUS_continuous.txt"
+        fileFUSResults = new File()
+    }
+
+    func preShowCheck() { return 0 }
+
+    proc show() {
+        initParamsFUS()
+        ensureCalciumDynamics()
+        seClampHelper.deployClamp(0)
+        setFUSFieldCoordinates()
+        setFUSSegmentGeometry()
+        updateBeamDisplay()
+        updateSafetyEstimates()
+        buildPanel()
+    }
+
+    proc advance() { local I_local, alpha_Np_m, dT_step
+        FUSContinuousSetEnvelope(FUS_pressure, FUS_duration)
+        FUSContinuousApplyForces()
+        fadvance()
+        pushIcaToCadifus()
+        // Thermal
+        dendrite_ref.o(0).sec { I_local = intensity_local_FUS_field(0.5) }
+        if (I_local > 0) {
+            alpha_Np_m = FUS_attenuation * FUS_freq * 1e-3 * 100
+            dT_step = 2 * alpha_Np_m * I_local * 0.025 * 1e-3 / (FUS_tissue_density * FUS_specific_heat)
+            FUS_temp_rise = FUS_temp_rise + dT_step
+            FUS_cumulative_temp_rise = FUS_temp_rise
+        }
+        graphPressure.exec_menu("View = plot")
+        graphVoltage.exec_menu("View = plot")
+        graphTension.exec_menu("View = plot")
+        graphCalcium.exec_menu("View = plot")
+        graphMechI.exec_menu("View = plot")
+        graphIca.exec_menu("View = plot")
+        graphTempRise.exec_menu("View = plot")
+        plotShapePressure.exec_menu("View = plot")
+        plotShapeTension2.exec_menu("View = plot")
+        plotShapeVm.exec_menu("View = plot")
+        fileFUSResults.printf("%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t", \
+            t, dendrite_ref.o(0).sec.v(0.5), soma_ref.o(0).sec.v(0.5), \
+            dendrite_ref.o(0).sec.p_local_FUS_field(0.5), \
+            dendrite_ref.o(0).sec.membrane_tension_FUS_field(0.5), \
+            dendrite_ref.o(0).sec.cai(0.5), soma_ref.o(0).sec.cai(0.5), \
+            dendrite_ref.o(0).sec.ipiezo_Piezo1(0.5), \
+            dendrite_ref.o(0).sec.ipiezo_Piezo2(0.5))
+        fileFUSResults.printf("%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\t%-6.5g\n", \
+            dendrite_ref.o(0).sec.itrpv4_TRPV4(0.5), \
+            dendrite_ref.o(0).sec.itrpa1_trpa1(0.5), \
+            FUS_diag_ipiezo1_soma, FUS_diag_ipiezo2_soma, \
+            FUS_diag_itrpv4_soma, FUS_diag_itrpa1_soma, \
+            dendrite_ref.o(0).sec.force_seg_FUS_field(0.5), \
+            FUS_diag_imech, FUS_diag_delta_ca)
+    }
+
+    func preRun() { local isInitOnly
+        isInitOnly = $1
+        ensureCalciumDynamics()
+        soma_ref.o(0).sec { FUS_cai_baseline = cai(0.5) }
+        FUS_temp_rise = 0
+        FUS_cumulative_temp_rise = 0
+        setFUSFieldCoordinates()
+        setFUSSegmentGeometry()
+        propagateTransducerParams()
+        fileFUSResults.wopen(outTxtFileRelPathName)
+        fileFUSResults.printf("# t(ms)\tV_dend(mV)\tV_soma(mV)\tP(Pa)\tTension(mN/m)\tCa_dend(mM)\tCa_soma(mM)\tipiezo1_d\tipiezo2_d\titrpv4_d\titrpa1_d\tipiezo1_s\tipiezo2_s\titrpv4_s\titrpa1_s\tF_seg\ti_mech\tdelta_ca\n")
+        return 0
+    }
+
+    func preContinue() {
+        fileFUSResults.aopen(outTxtFileRelPathName)
+        return 0
+    }
+
+    proc postRun() {
+        fileFUSResults.close()
+        print "FUS continuous results saved to: ", outTxtFileRelPathName
+    }
+
+    proc simDismissHandler() {
+        removeItemFromList(graphList[1], graphPressure)
+        removeItemFromList(graphList[1], graphVoltage)
+        removeItemFromList(graphList[1], graphTension)
+        removeItemFromList(graphList[1], graphCalcium)
+        removeItemFromList(graphList[1], graphMechI)
+        removeItemFromList(graphList[1], graphIca)
+        removeItemFromList(graphList[1], graphTempRise)
+        removeItemFromList(fast_flush_list, plotShapePressure)
+        removeItemFromList(fast_flush_list, plotShapeTension2)
+        removeItemFromList(fast_flush_list, plotShapeVm)
+        unmapIfNotNil(mainBox)
+        seClampHelper.removeClamp()
+    }
+
+    proc initParamsFUS() {
+        FUS_freq = 500
+        FUS_pressure = 0.5
+        FUS_duration = 50
+        FUS_focal_length = 50
+        FUS_aperture_diam = 25
+        FUS_x_focus = 0  FUS_y_focus = 0  FUS_z_focus = 0
+        FUS_attenuation = 0.3
+        FUS_speed_of_sound = 1540
+        FUS_tissue_density = 1040
+        FUS_specific_heat = 3600
+        FUS_f_number = 0  FUS_wavelength_mm = 0
+        FUS_fwhm_lat_amp_mm = 0  FUS_fwhm_ax_amp_mm = 0
+        FUS_fwhm_lat_int_mm = 0  FUS_fwhm_ax_int_mm = 0
+        FUS_temp_rise = 0  FUS_intensity_ISPTA = 0  FUS_mech_index = 0
+        forall {
+            if (ismembrane("Piezo1") || ismembrane("Piezo2") || ismembrane("TRPV4") || ismembrane("trpa1")) {
+                cao = 2.0  nao = 145.0  ko = 5.0
+                cai = 50e-6  nai = 10.0  ki = 140.0
+            }
+        }
+    }
+
+    proc updateSafetyEstimates() { local P_Pa, I_SPTA
+        P_Pa = FUS_pressure * 1e6
+        I_SPTA = P_Pa * P_Pa / (2 * FUS_tissue_density * FUS_speed_of_sound)
+        FUS_intensity_ISPTA = I_SPTA / 10000
+        if (FUS_freq > 0) { FUS_mech_index = FUS_pressure / sqrt(FUS_freq / 1000) }
+    }
+
+    proc setFUSFieldCoordinates() { local i, total_len, target_len, seg_len, cumul_len, frac
+        forall {
+            if (ismembrane("FUS_field")) {
+                if (n3d() >= 2) {
+                    total_len = 0
+                    for i = 1, n3d()-1 {
+                        total_len = total_len + sqrt((x3d(i)-x3d(i-1))^2 + (y3d(i)-y3d(i-1))^2 + (z3d(i)-z3d(i-1))^2)
+                    }
+                    for (x, 0) {
+                        target_len = x * total_len
+                        cumul_len = 0
+                        for i = 1, n3d()-1 {
+                            seg_len = sqrt((x3d(i)-x3d(i-1))^2 + (y3d(i)-y3d(i-1))^2 + (z3d(i)-z3d(i-1))^2)
+                            if (cumul_len + seg_len >= target_len && seg_len > 0) {
+                                frac = (target_len - cumul_len) / seg_len
+                                x_comp_FUS_field(x) = x3d(i-1) + frac * (x3d(i) - x3d(i-1))
+                                y_comp_FUS_field(x) = y3d(i-1) + frac * (y3d(i) - y3d(i-1))
+                                z_comp_FUS_field(x) = z3d(i-1) + frac * (z3d(i) - z3d(i-1))
+                                i = n3d()
+                            }
+                            cumul_len = cumul_len + seg_len
+                        }
+                    }
+                } else if (n3d() == 1) {
+                    x_comp_FUS_field = x3d(0)
+                    y_comp_FUS_field = y3d(0)
+                    z_comp_FUS_field = z3d(0)
+                }
+            }
+        }
+    }
+
+    proc setFUSSegmentGeometry() {
+        forall {
+            if (ismembrane("FUS_field")) {
+                for (x, 0) {
+                    seg_diam_FUS_field(x) = diam(x)
+                    seg_L_FUS_field(x) = L / nseg
+                }
+            }
+        }
+    }
+
+    proc propagateTransducerParams() {
+        forall {
+            if (ismembrane("FUS_field")) {
+                freq_FUS_field = FUS_freq
+                pressure_source_FUS_field = FUS_pressure
+                focal_length_FUS_field = FUS_focal_length
+                aperture_diam_FUS_field = FUS_aperture_diam
+                attenuation_FUS_field = FUS_attenuation
+                sound_speed_FUS_field = FUS_speed_of_sound
+                tissue_density_FUS_field = FUS_tissue_density
+                x_focus_FUS_field = FUS_x_focus
+                y_focus_FUS_field = FUS_y_focus
+                z_focus_FUS_field = FUS_z_focus
+            }
+        }
+    }
+
+    proc updateBeamDisplay() { local lambda_m, w0_m, zR_m
+        if (FUS_aperture_diam > 0) {
+            FUS_f_number = FUS_focal_length / FUS_aperture_diam
+        } else { FUS_f_number = 2 }
+        if (FUS_freq > 0) {
+            lambda_m = FUS_speed_of_sound / (FUS_freq * 1000)
+        } else { lambda_m = 0.00308 }
+        FUS_wavelength_mm = lambda_m * 1000
+        w0_m = lambda_m * FUS_f_number
+        if (lambda_m > 0) {
+            zR_m = 3.14159265 * w0_m * w0_m / lambda_m
+        } else { zR_m = 1 }
+        FUS_fwhm_lat_amp_mm = w0_m * 1.6651 * 1000
+        FUS_fwhm_ax_amp_mm  = zR_m * 3.4641 * 1000
+        FUS_fwhm_lat_int_mm = w0_m * 1.1774 * 1000
+        FUS_fwhm_ax_int_mm  = zR_m * 2.0 * 1000
+    }
+
+    proc buildPanel() {
+        mainBox = new HBox()
+        mainBox.intercept(1)
+
+        xpanel("")
+        xlabel("=== Continuous FUS ===")
+        xlabel("--- Acoustic ---")
+        xpvalue("Frequency (kHz)", &FUS_freq, 1, "updateBeamDisplay() propagateTransducerParams() updateSafetyEstimates()")
+        xpvalue("Pressure (MPa)", &FUS_pressure, 1, "updateSafetyEstimates()")
+        xpvalue("Duration (ms)", &FUS_duration, 1)
+        xlabel("--- Transducer ---")
+        xpvalue("Focal (mm)", &FUS_focal_length, 1, "updateBeamDisplay() propagateTransducerParams()")
+        xpvalue("Aperture (mm)", &FUS_aperture_diam, 1, "updateBeamDisplay() propagateTransducerParams()")
+        xpvalue("F#", &FUS_f_number, 0)
+        xlabel("  P-FWHM:")
+        xpvalue("  Lat", &FUS_fwhm_lat_amp_mm, 0)
+        xpvalue("  Ax", &FUS_fwhm_ax_amp_mm, 0)
+        xlabel("  I-FWHM:")
+        xpvalue("  Lat", &FUS_fwhm_lat_int_mm, 0)
+        xpvalue("  Ax", &FUS_fwhm_ax_int_mm, 0)
+        xlabel("--- Safety ---")
+        xpvalue("ISPTA (W/cm2)", &FUS_intensity_ISPTA, 0)
+        xpvalue("MI", &FUS_mech_index, 0)
+        xpvalue("dT (C)", &FUS_temp_rise, 0)
+        xlabel("--- Focus (um) ---")
+        xpvalue("X", &FUS_x_focus, 1, "propagateTransducerParams()")
+        xpvalue("Y", &FUS_y_focus, 1, "propagateTransducerParams()")
+        xpvalue("Z", &FUS_z_focus, 1, "propagateTransducerParams()")
+        xlabel("--- Tissue ---")
+        xpvalue("Atten", &FUS_attenuation, 1, "propagateTransducerParams()")
+        xpvalue("c", &FUS_speed_of_sound, 1, "updateBeamDisplay() propagateTransducerParams() updateSafetyEstimates()")
+        xpvalue("rho", &FUS_tissue_density, 1, "propagateTransducerParams() updateSafetyEstimates()")
+        xpvalue("Cp (J/kg/K)", &FUS_specific_heat, 1)
+        xlabel("--- Bridge ---")
+        xpvalue("kp Piezo", &FUS_kp_piezo, 1)
+        xpvalue("kp TRPV4", &FUS_kp_trpv4, 1)
+        xpvalue("kp TRPA1", &FUS_kp_trpa1, 1)
+        xpvalue("Ramp", &FUS_ramp_ms, 1)
+        xlabel("--- Shape Scales ---")
+        xpvalue("T min", &FUS_shape_Tmin, 1, "applyShapeScales()")
+        xpvalue("T max", &FUS_shape_Tmax, 1, "applyShapeScales()")
+        xpvalue("V min", &FUS_shape_Vmin, 1, "applyShapeScales()")
+        xpvalue("V max", &FUS_shape_Vmax, 1, "applyShapeScales()")
+        xlabel("--- Clamp ---")
+        xpvalue("Vclamp", &seClampHelper.seClamp.amp1, 1)
+        xpvalue("Dur", &seClampHelper.seClamp.dur1, 1)
+        xlabel("---")
+        xpvalue("tstop", &tstop, 1)
+        xbutton("Run", "altRunControlWidget.initAndRunHandler()")
+        xpanel()
+
+        rightVBox = new VBox()
+        rightVBox.intercept(1)
+
+            graphPressure = new Graph(0)
+            graphList[1].append(graphPressure)
+            graphPressure.size(0, tstop, 0, 600000)
+            graphPressure.view(0, 0, tstop, 600000, 0, 0, 400, 150)
+            graphPressure.addvar("dendrite_ref.o(0).sec.p_local_FUS_field(0.5)", 1, 1, 0.8, 0.9, 2)
+            graphPressure.label(0.3, 0.9, "Pressure (Pa)", 2, 1, 0, 1, 1)
+
+            graphVoltage = new Graph(0)
+            graphList[1].append(graphVoltage)
+            graphVoltage.size(0, tstop, -80, 40)
+            graphVoltage.view(0, -80, tstop, 120, 0, 0, 400, 150)
+            graphVoltage.addvar("dendrite_ref.o(0).sec.v(0.5)", 4, 1, 0.8, 0.9, 2)
+	    graphVoltage.addvar("soma_ref.o(0).sec.v(0.5)", 4, 1, 0.8, 0.9, 2)
+            graphVoltage.label(0.3, 0.9, "Voltage (mV)", 2, 1, 0, 1, 1)
+
+            graphTension = new Graph(0)
+            graphList[1].append(graphTension)
+            graphTension.size(0, tstop, 0, 10)
+            graphTension.view(0, 0, tstop, 10, 0, 0, 400, 150)
+            graphTension.addvar("dendrite_ref.o(0).sec.membrane_tension_FUS_field(0.5)", 2, 1, 0.8, 0.9, 2)
+            graphTension.label(0.2, 0.9, "Tension (mN/m)", 2, 1, 0, 1, 1)
+
+            graphCalcium = new Graph(0)
+            graphList[1].append(graphCalcium)
+            graphCalcium.size(0, tstop, 0, 0.002)
+            graphCalcium.view(0, 0, tstop, 0.002, 0, 0, 400, 150)
+            graphCalcium.addvar("dendrite_ref.o(0).sec.cai(0.5)", 5, 1, 0.8, 0.9, 2)
+	    graphCalcium.addvar("soma_ref.o(0).sec.cai(0.5)", 5, 1, 0.8, 0.9, 2)
+            graphCalcium.label(0.3, 0.9, "[Ca]i (mM)", 2, 1, 0, 1, 1)
+
+            graphMechI = new Graph(0)
+            graphList[1].append(graphMechI)
+            graphMechI.size(0, tstop, -0.01, 0.01)
+            graphMechI.view(0, -0.01, tstop, 0.02, 0, 0, 400, 150)
+            dendrite_ref.o(0).sec {
+                if (ismembrane("Piezo1")) { graphMechI.addvar("dendrite_ref.o(0).sec.ipiezo_Piezo1(0.5)", 3, 1, 0.8, 0.9, 2) }
+                if (ismembrane("Piezo2")) { graphMechI.addvar("dendrite_ref.o(0).sec.ipiezo_Piezo2(0.5)", 2, 1, 0.8, 0.9, 2) }
+                if (ismembrane("TRPV4"))  { graphMechI.addvar("dendrite_ref.o(0).sec.itrpv4_TRPV4(0.5)", 4, 1, 0.8, 0.9, 2) }
+                if (ismembrane("trpa1"))  { graphMechI.addvar("dendrite_ref.o(0).sec.itrpa1_trpa1(0.5)", 1, 1, 0.8, 0.9, 2) }
+            }
+            graphMechI.label(0.1, 0.9, "Mechanosensitive I (mA/cm2)", 2, 1, 0, 1, 1)
+            graphIca = new Graph(0)
+            graphList[1].append(graphIca)
+            graphIca.size(0, tstop, -0.1, 0.01)
+            graphIca.view(0, -0.1, tstop, 0.11, 0, 0, 400, 150)
+            graphIca.addvar("dendrite_ref.o(0).sec.ica(0.5)", 1, 1, 0.8, 0.9, 2)
+            graphIca.addvar("soma_ref.o(0).sec.ica(0.5)", 2, 1, 0.8, 0.9, 2)
+            graphIca.label(0.3, 0.9, "ica (mA/cm2)", 2, 1, 0, 1, 1)
+
+
+            graphTempRise = new Graph(0)
+            graphList[1].append(graphTempRise)
+            graphTempRise.size(0, tstop, 0, 1)
+            graphTempRise.view(0, 0, tstop, 1, 0, 0, 400, 150)
+            graphTempRise.addexpr("FUS_cumulative_temp_rise", 6, 1, 0.8, 0.9, 2)
+            graphTempRise.label(0.2, 0.9, "dT (C)", 2, 1, 0, 1, 1)
+
+
+
+        rightVBox.intercept(0)
+        rightVBox.map("", 0, 0, -1, -1)
+
+
+
+
+
+
+        mainBox.intercept(0)
+        mainBox.map("FUS Continuous", 30, 30, 700, 900)
+
+        // ---- PlotShapes as independent windows ----
+
+	graphMechI = new Graph(0)
+        graphList[1].append(graphMechI)
+        graphMechI.size(0, tstop, -0.01, 0.01)
+        graphMechI.view(0, -0.01, tstop, 0.02, 0, 0, 400, 150)
+        dendrite_ref.o(0).sec {
+                if (ismembrane("Piezo1")) { graphMechI.addvar("dendrite_ref.o(0).sec.ipiezo_Piezo1(0.5)", 3, 1, 0.8, 0.9, 2) }
+                if (ismembrane("Piezo2")) { graphMechI.addvar("dendrite_ref.o(0).sec.ipiezo_Piezo2(0.5)", 2, 1, 0.8, 0.9, 2) }
+                if (ismembrane("TRPV4"))  { graphMechI.addvar("dendrite_ref.o(0).sec.itrpv4_TRPV4(0.5)", 4, 1, 0.8, 0.9, 2) }
+                if (ismembrane("trpa1"))  { graphMechI.addvar("dendrite_ref.o(0).sec.itrpa1_trpa1(0.5)", 1, 1, 0.8, 0.9, 2) }
+            }	
+
+	graphMechI = new Graph(0)
+        graphList[1].append(graphMechI)
+        graphMechI.size(0, tstop, -0.01, 0.01)
+        graphMechI.view(-45, -45, 90, 90, 750, 200, 450, 280)
+        soma_ref.o(0).sec {
+                if (ismembrane("Piezo1")) { graphMechI.addvar("soma_ref.o(0).sec.ipiezo_Piezo1(0.5)", 3, 1, 0.8, 0.9, 2) }
+                if (ismembrane("Piezo2")) { graphMechI.addvar("soma_ref.o(0).sec.ipiezo_Piezo2(0.5)", 2, 1, 0.8, 0.9, 2) }
+                if (ismembrane("TRPV4"))  { graphMechI.addvar("soma_ref.o(0).sec.itrpv4_TRPV4(0.5)", 4, 1, 0.8, 0.9, 2) }
+                if (ismembrane("trpa1"))  { graphMechI.addvar("soma_ref.o(0).sec.itrpa1_trpa1(0.5)", 1, 1, 0.8, 0.9, 2) }
+            }	
+
+
+        plotShapePressure = new PlotShape(0)
+        fast_flush_list.append(plotShapePressure)
+        plotShapePressure.size(-45, 45, -45, 45)
+        plotShapePressure.view(-45, -45, 90, 90, 750, 30, 450, 280)
+        plotShapePressure.exec_menu("Shape Plot")
+        plotShapePressure.variable("p_local_FUS_field")
+        plotShapePressure.label(0.02, 0.97, "Pressure (Pa)", 2, 1, 0, 1, 1)
+        plotShapePressure.show(0)
+        plotShapePressure.scale(0, 500000)
+
+        plotShapeTension2 = new PlotShape(0)
+        fast_flush_list.append(plotShapeTension2)
+        plotShapeTension2.size(-45, 45, -45, 45)
+        plotShapeTension2.view(-45, -45, 90, 90, 750, 320, 450, 280)
+        plotShapeTension2.exec_menu("Shape Plot")
+        plotShapeTension2.variable("membrane_tension_FUS_field")
+        plotShapeTension2.label(0.02, 0.97, "Tension (mN/m)", 2, 1, 0, 1, 1)
+        plotShapeTension2.show(0)
+        plotShapeTension2.scale(0, 10)
+
+        plotShapeVm = new PlotShape(0)
+        fast_flush_list.append(plotShapeVm)
+        plotShapeVm.size(-45, 45, -45, 45)
+        plotShapeVm.view(-45, -45, 90, 90, 750, 610, 450, 280)
+        plotShapeVm.exec_menu("Shape Plot")
+        plotShapeVm.variable("v")
+        plotShapeVm.label(0.02, 0.97, "Vm (mV)", 2, 1, 0, 1, 1)
+        plotShapeVm.show(0)
+        plotShapeVm.scale(-80, 40)
+    }
+
+endtemplate SimFUSContinuous
+
+// ================================================================
+// Ensure cadifus is inserted wherever mechanoreceptors are
+// Must run BEFORE simulation to enable ica -> cai coupling
+// ================================================================
+// --- Calcium dynamics: cadifus-only (no cad/cadfus/cad_simple) ---
+// Global knobs (safe defaults if not already defined elsewhere)
+if (!name_declared("ica_scale"))   { ica_scale = 1 }     // dimensionless
+if (!name_declared("depth_fus"))   { depth_fus = 0.1 }   // um (submembrane shell depth for FUS influx)
+if (!name_declared("FUS_cai_baseline")) { FUS_cai_baseline = 50e-6 }  // mM
+
+proc ensureCalciumDynamics() { local count
+    count = 0
+    forall {
+        if (ismembrane("cadifus")) {
+            count = count + 1
+        }
+    }
+    print "ensureCalciumDynamics: cadifus in ", count, " sections"
+}
+
+// Push ionic ica into cadifus each timestep (cadifus reads ica_fus; it is reset to 0 inside cadifus.mod)
+FUS_ca_depth = 0.1
+FUS_ca_scale = 0.001
+
+proc pushIcaToCadifus() { local i_mech, delta_ca, tens
+    FUS_diag_imech = 0
+    FUS_diag_delta_ca = 0
+    dendrite_ref.o(0).sec {
+        i_mech = 0
+        if (ismembrane("Piezo1")) { i_mech = i_mech + ipiezo_Piezo1(0.5) }
+        if (ismembrane("Piezo2")) { i_mech = i_mech + ipiezo_Piezo2(0.5) }
+        if (ismembrane("TRPV4"))  { i_mech = i_mech + itrpv4_TRPV4(0.5) }
+        if (ismembrane("trpa1"))  { i_mech = i_mech + itrpa1_trpa1(0.5) }
+        if (i_mech < 0) { i_mech = -i_mech }
+        FUS_diag_imech = i_mech
+    }
+    FUS_diag_ipiezo1_soma = 0
+    FUS_diag_ipiezo2_soma = 0
+    FUS_diag_itrpv4_soma = 0
+    FUS_diag_itrpa1_soma = 0
+    soma_ref.o(0).sec {
+        if (ismembrane("Piezo1")) { FUS_diag_ipiezo1_soma = ipiezo_Piezo1(0.5) }
+        if (ismembrane("Piezo2")) { FUS_diag_ipiezo2_soma = ipiezo_Piezo2(0.5) }
+        if (ismembrane("TRPV4"))  { FUS_diag_itrpv4_soma  = itrpv4_TRPV4(0.5) }
+        if (ismembrane("trpa1"))  { FUS_diag_itrpa1_soma  = itrpa1_trpa1(0.5) }
+    }
+    forall {
+        if (ismembrane("cadifus") && ismembrane("FUS_field")) {
+            tens = membrane_tension_FUS_field(0.5)
+            if (tens > 0) {
+                i_mech = 0
+                if (ismembrane("Piezo1")) { i_mech = i_mech + ipiezo_Piezo1(0.5) }
+                if (ismembrane("Piezo2")) { i_mech = i_mech + ipiezo_Piezo2(0.5) }
+                if (ismembrane("TRPV4"))  { i_mech = i_mech + itrpv4_TRPV4(0.5) }
+                if (ismembrane("trpa1"))  { i_mech = i_mech + itrpa1_trpa1(0.5) }
+                if (i_mech < 0) { i_mech = -i_mech }
+                if (i_mech > 1e-10) {
+                    delta_ca = dt * (10000) * i_mech * FUS_ca_scale / (2 * 96489 * FUS_ca_depth)
+                    cai = cai(0.5) + delta_ca
+                    FUS_diag_delta_ca = delta_ca
+                }
+            }
+        }
+    }
+}
+
+// Scale PlotShapes from panel
+proc applyShapeScales() {
+    // Access running simulation's plotshapes via altRunControlWidget
+    altRunControlWidget.runningSimulation.plotShapeTension2.scale(FUS_shape_Tmin, FUS_shape_Tmax)
+    altRunControlWidget.runningSimulation.plotShapeVm.scale(FUS_shape_Vmin, FUS_shape_Vmax)
+    altRunControlWidget.runningSimulation.plotShapeTension2.flush()
+    altRunControlWidget.runningSimulation.plotShapeVm.flush()
+}
+
+
+
+// ================================================================
+proc FUSContinuousSetEnvelope() { local onset_ms, P_Pa, env_val
+    onset_ms = 10
+    env_val = FUS_RampEnvelope(t - onset_ms, $2, FUS_ramp_ms)
+    P_Pa = $1 * 1e6 * env_val
+    forall {
+        if (ismembrane("FUS_field")) {
+            for (x, 0) { p_input_FUS_field(x) = P_Pa }
+        }
+    }
+}
+
+proc FUSContinuousApplyForces() { local mt, ss
+    forall {
+        if (ismembrane("FUS_field")) {
+            for (x, 0) {
+                mt = membrane_tension_FUS_field(x)
+                ss = shear_stress_FUS_field(x)
+                if (ismembrane("Piezo1")) { mforce_Piezo1(x) = mt * FUS_kp_piezo }
+                if (ismembrane("Piezo2")) { mforce_Piezo2(x) = mt * FUS_kp_piezo }
+                if (ismembrane("TRPV4"))  { shear_stress_TRPV4(x) = ss * 10.0 * FUS_kp_trpv4 }
+                if (ismembrane("trpa1"))  { agonist_conc_trpa1(x) = mt * FUS_kp_trpa1 }
+            }
+        }
+    }
+}
