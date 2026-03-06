@@ -89,9 +89,9 @@ ENDCOMMENT
 
 NEURON {
     SUFFIX cadifus
-    USEION ca READ cao, cai, ica WRITE cai, ica
+    USEION ca READ cao, cai, ica WRITE cai
     USEION ip3 READ ip3i  WRITE ip3i VALENCE 1 
-    RANGE ica_pmp, cai0, fluo, fluoNew
+    RANGE ica_pmp, cai0, fluo, fluoNew, ica_scale, ica_fus, depth_fus
     RANGE alpha : relative abundance of SERCA
 	RANGE Dip3, Ip3init, modelStim, v_bar_beta
     GLOBAL vrat, TBufs, TBufm, BufferAlpha
@@ -120,6 +120,8 @@ PARAMETER {
 
 
     cai0 = 50e-6 (mM)
+    ica_scale = 1 (1)
+    depth_fus = 0.1 (um)
     fluo = 0     (mM) 
     fluoNew = 0  
     DCa   = 0.22 (um2/ms) : Fink et al. 2000 0.22
@@ -196,6 +198,7 @@ ASSIGNED {
     ica       (mA/cm2)
     ica_pmp   (mA/cm2)
     ica_pmp_last   (mA/cm2)
+    ica_fus   (mA/cm2)
     parea     (um)     : pump area per unit length
 
     sump      (mM)
@@ -264,7 +267,8 @@ INITIAL {
     parea = PI*diam
 
     : reconsider and revise initialization comments
-    ica=0
+    : ica=0  : REMOVED for FUS coupling
+    ica_fus = 0
     ica_pmp = 0
     ica_pmp_last = 0
     : If there is a voltage-gated calcium current, 
@@ -333,7 +337,7 @@ KINETIC state {
 	
 	
     : all currents except cell membrane ca pump
-    ~ ca[0] << (-(ica - ica_pmp_last)*PI*diam/(2*FARADAY))  : ica is Ca efflux
+    : ~ ca[0] << (0)  : FUS influx moved to BREAKPOINT - sparse solver cannot use ica_fus
     : radial diffusion
     FROM i=0 TO Nannuli-2 {
 		
@@ -349,9 +353,9 @@ KINETIC state {
         dsqvol = dsq*vrat[i]
         ~ ca[i] + bufs[i] <-> cabufs[i]  (kfs*dsqvol, (0.001)*KDs*kfs*dsqvol)
         ~ ca[i] + bufm[i] <-> cabufm[i]  (kfm*dsqvol, (0.001)*KDm*kfm*dsqvol)
-			if (ca[i] < cai0/2) {
-			 ca[i] = cai0/2
-		}
+			: if (ca[i] < cai0/2) {  : REMOVED - breaks sparse solver
+			 : ca[i] = cai0/2  : REMOVED
+		: }  : REMOVED (was if closing brace)
     }
     : SERCA pump, channel, and leak
     FROM i=0 TO Nannuli-1 {
@@ -363,9 +367,9 @@ KINETIC state {
         ~ ca[i] << ( dsqvol*alpha*jmax*(1-(ca[i]/caer)) * ( (ip3i/(ip3i+Kip3)) * (ca[i]/(ca[i]+Kact)) * ho[i] )^3 )
         : leak
         ~ ca[i] << (dsqvol*alpha*L[i]*(1 - (ca[i]/caer)))
-			if (ca[i] < cai0/2) {
-			 ca[i] = cai0/2
-		}
+			: if (ca[i] < cai0/2) {  : REMOVED - breaks sparse solver
+			 : ca[i] = cai0/2  : REMOVED
+		: }  : REMOVED (was if closing brace)
     }
 	
     cai = ca[0]
