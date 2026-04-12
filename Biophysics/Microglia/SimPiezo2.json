@@ -1,0 +1,126 @@
+{
+    "Soma": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 1.0
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 0.0001,
+                "e_pas (mV)": -70.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "Piezo2": {
+            "PARAMETER": {
+                "density_Piezo2": 150000000.0,
+                "mforce_Piezo2": 0,
+                "force_sensitivity_Piezo2": 0.08,
+                "force_threshold_Piezo2": 0.3,
+                "g_single_Piezo2": 3e-11,
+                "pca_Piezo2": 1.0,
+                "pna_Piezo2": 0.12,
+                "pk_Piezo2": 0.09,
+                "density_scale_mode_Piezo2": 1,
+                "density_scale_factor_Piezo2": 1.0,
+                "ca_modulation_strength_Piezo2": 0.0
+            }
+        }
+    },
+    "Dendrites": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 1.0
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 0.0001,
+                "e_pas (mV)": -70.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "Piezo2": {
+            "PARAMETER": {
+                "density_Piezo2": 80000000.0,
+                "mforce_Piezo2": 0,
+                "force_sensitivity_Piezo2": 0.08,
+                "force_threshold_Piezo2": 0.3,
+                "g_single_Piezo2": 3e-11,
+                "pca_Piezo2": 1.0,
+                "pna_Piezo2": 0.12,
+                "pk_Piezo2": 0.09,
+                "density_scale_mode_Piezo2": 1,
+                "density_scale_factor_Piezo2": 1.0,
+                "ca_modulation_strength_Piezo2": 0.0
+            }
+        }
+    },
+    "Small Glia": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 0.8
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 0.0001,
+                "e_pas (mV)": -85.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "Piezo2": {
+            "PARAMETER": {
+                "density_Piezo2": 15000000.0,
+                "mforce_Piezo2": 0,
+                "force_sensitivity_Piezo2": 0.07,
+                "force_threshold_Piezo2": 0.5,
+                "g_single_Piezo2": 3e-11,
+                "pca_Piezo2": 1.0,
+                "pna_Piezo2": 0.12,
+                "pk_Piezo2": 0.09,
+                "density_scale_mode_Piezo2": 1,
+                "density_scale_factor_Piezo2": 1.0,
+                "ca_modulation_strength_Piezo2": 0.0
+            }
+        }
+    },
+    "Large Glia": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 0.8
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 0.001,
+                "e_pas (mV)": -85.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "Piezo2": {
+            "PARAMETER": {
+                "density_Piezo2": 250000000.0,
+                "mforce_Piezo2": 0,
+                "force_sensitivity_Piezo2": 0.09,
+                "force_threshold_Piezo2": 0.25,
+                "g_single_Piezo2": 3e-11,
+                "pca_Piezo2": 1.0,
+                "pna_Piezo2": 0.12,
+                "pk_Piezo2": 0.09,
+                "density_scale_mode_Piezo2": 1,
+                "density_scale_factor_Piezo2": 1.0,
+                "ca_modulation_strength_Piezo2": 0.0
+            }
+        }
+    }
+}

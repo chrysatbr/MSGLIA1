@@ -1,0 +1,234 @@
+{
+    "Soma": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 1.0
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 0.0001,
+                "e_pas (mV)": -70.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "TNFa": {
+            "PARAMETER": {
+                "lps_stim_TNFa": 0,
+                "lps_sensitivity_TNFa": 0.1,
+                "lps_threshold_TNFa": 1.0,
+                "ca_threshold_TNFa": 0.0001,
+                "ca_sensitivity_TNFa": 2.0,
+                "basal_production_TNFa": 0.01,
+                "max_production_TNFa": 10.0,
+                "tau_production_TNFa": 100,
+                "tau_decay_TNFa": 500,
+                "tau_mrna_TNFa": 50,
+                "il10_inhibition_strength_TNFa": 0.5,
+                "tgfb_inhibition_strength_TNFa": 0.7,
+                "tau_il10_TNFa": 50,
+                "tau_tgfb_TNFa": 200,
+                "il10_production_factor_TNFa": 0.3,
+                "tgfb_production_factor_TNFa": 0.2,
+                "il10_decay_TNFa": 0.004,
+                "tgfb_decay_TNFa": 0.002,
+                "tnf_autocrine_hill_n_TNFa": 2.0,
+                "tnf_autocrine_k50_TNFa": 5.0,
+                "tnfr1_expression_TNFa": 1.0,
+                "tnfr2_expression_TNFa": 0.5,
+                "tnfr1_kon_TNFa": 0.01,
+                "tnfr1_koff_TNFa": 0.001,
+                "tnfr2_kon_TNFa": 0.05,
+                "tnfr2_koff_TNFa": 0.02,
+                "nfkb_activation_threshold_TNFa": 0.1,
+                "nfkb_decay_rate_TNFa": 0.02,
+                "nfkb_activation_rate_TNFa": 0.05,
+                "translation_delay_factor_TNFa": 0.1,
+                "secretion_rate_TNFa": 0.05,
+                "g_tnf_TNFa": 0.0001,
+                "pca_TNFa": 1.0,
+                "pna_TNFa": 0.1,
+                "pk_TNFa": 0.08,
+                "geometry_scale_mode_TNFa": 1,
+                "reference_diameter_TNFa": 1.0,
+                "geometry_scaling_factor_TNFa": 1.0
+            }
+        }
+    },
+    "Dendrites": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 1.0
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 0.0001,
+                "e_pas (mV)": -70.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "TNFa": {
+            "PARAMETER": {
+                "lps_stim_TNFa": 0,
+                "lps_sensitivity_TNFa": 0.1,
+                "lps_threshold_TNFa": 1.0,
+                "ca_threshold_TNFa": 0.0001,
+                "ca_sensitivity_TNFa": 2.0,
+                "basal_production_TNFa": 0.01,
+                "max_production_TNFa": 8.0,
+                "tau_production_TNFa": 120,
+                "tau_decay_TNFa": 500,
+                "tau_mrna_TNFa": 60,
+                "il10_inhibition_strength_TNFa": 0.5,
+                "tgfb_inhibition_strength_TNFa": 0.7,
+                "tau_il10_TNFa": 60,
+                "tau_tgfb_TNFa": 220,
+                "il10_production_factor_TNFa": 0.3,
+                "tgfb_production_factor_TNFa": 0.2,
+                "il10_decay_TNFa": 0.004,
+                "tgfb_decay_TNFa": 0.002,
+                "tnf_autocrine_hill_n_TNFa": 2.0,
+                "tnf_autocrine_k50_TNFa": 5.0,
+                "tnfr1_expression_TNFa": 0.8,
+                "tnfr2_expression_TNFa": 0.4,
+                "tnfr1_kon_TNFa": 0.01,
+                "tnfr1_koff_TNFa": 0.001,
+                "tnfr2_kon_TNFa": 0.05,
+                "tnfr2_koff_TNFa": 0.02,
+                "nfkb_activation_threshold_TNFa": 0.1,
+                "nfkb_decay_rate_TNFa": 0.02,
+                "nfkb_activation_rate_TNFa": 0.05,
+                "translation_delay_factor_TNFa": 0.1,
+                "secretion_rate_TNFa": 0.05,
+                "g_tnf_TNFa": 0.0001,
+                "pca_TNFa": 1.0,
+                "pna_TNFa": 0.1,
+                "pk_TNFa": 0.08,
+                "geometry_scale_mode_TNFa": 1,
+                "reference_diameter_TNFa": 1.0,
+                "geometry_scaling_factor_TNFa": 1.0
+            }
+        }
+    },
+    "Small Glia": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 0.8
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 0.0001,
+                "e_pas (mV)": -85.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "TNFa": {
+            "PARAMETER": {
+                "lps_stim_TNFa": 0,
+                "lps_sensitivity_TNFa": 0.15,
+                "lps_threshold_TNFa": 0.5,
+                "ca_threshold_TNFa": 5e-05,
+                "ca_sensitivity_TNFa": 2.5,
+                "basal_production_TNFa": 0.05,
+                "max_production_TNFa": 15.0,
+                "tau_production_TNFa": 80,
+                "tau_decay_TNFa": 400,
+                "tau_mrna_TNFa": 40,
+                "il10_inhibition_strength_TNFa": 0.4,
+                "tgfb_inhibition_strength_TNFa": 0.6,
+                "tau_il10_TNFa": 45,
+                "tau_tgfb_TNFa": 180,
+                "il10_production_factor_TNFa": 0.35,
+                "tgfb_production_factor_TNFa": 0.25,
+                "il10_decay_TNFa": 0.005,
+                "tgfb_decay_TNFa": 0.003,
+                "tnf_autocrine_hill_n_TNFa": 2.2,
+                "tnf_autocrine_k50_TNFa": 4.0,
+                "tnfr1_expression_TNFa": 1.2,
+                "tnfr2_expression_TNFa": 0.7,
+                "tnfr1_kon_TNFa": 0.012,
+                "tnfr1_koff_TNFa": 0.0008,
+                "tnfr2_kon_TNFa": 0.06,
+                "tnfr2_koff_TNFa": 0.025,
+                "nfkb_activation_threshold_TNFa": 0.08,
+                "nfkb_decay_rate_TNFa": 0.018,
+                "nfkb_activation_rate_TNFa": 0.06,
+                "translation_delay_factor_TNFa": 0.12,
+                "secretion_rate_TNFa": 0.06,
+                "g_tnf_TNFa": 0.00015,
+                "pca_TNFa": 1.0,
+                "pna_TNFa": 0.1,
+                "pk_TNFa": 0.08,
+                "geometry_scale_mode_TNFa": 1,
+                "reference_diameter_TNFa": 1.0,
+                "geometry_scaling_factor_TNFa": 1.0
+            }
+        }
+    },
+    "Large Glia": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 0.8
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 0.001,
+                "e_pas (mV)": -85.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "TNFa": {
+            "PARAMETER": {
+                "lps_stim_TNFa": 0,
+                "lps_sensitivity_TNFa": 0.2,
+                "lps_threshold_TNFa": 0.3,
+                "ca_threshold_TNFa": 3e-05,
+                "ca_sensitivity_TNFa": 3.0,
+                "basal_production_TNFa": 0.1,
+                "max_production_TNFa": 25.0,
+                "tau_production_TNFa": 60,
+                "tau_decay_TNFa": 350,
+                "tau_mrna_TNFa": 30,
+                "il10_inhibition_strength_TNFa": 0.35,
+                "tgfb_inhibition_strength_TNFa": 0.55,
+                "tau_il10_TNFa": 40,
+                "tau_tgfb_TNFa": 160,
+                "il10_production_factor_TNFa": 0.4,
+                "tgfb_production_factor_TNFa": 0.3,
+                "il10_decay_TNFa": 0.006,
+                "tgfb_decay_TNFa": 0.004,
+                "tnf_autocrine_hill_n_TNFa": 2.5,
+                "tnf_autocrine_k50_TNFa": 3.5,
+                "tnfr1_expression_TNFa": 1.5,
+                "tnfr2_expression_TNFa": 1.0,
+                "tnfr1_kon_TNFa": 0.015,
+                "tnfr1_koff_TNFa": 0.0005,
+                "tnfr2_kon_TNFa": 0.07,
+                "tnfr2_koff_TNFa": 0.03,
+                "nfkb_activation_threshold_TNFa": 0.07,
+                "nfkb_decay_rate_TNFa": 0.015,
+                "nfkb_activation_rate_TNFa": 0.07,
+                "translation_delay_factor_TNFa": 0.15,
+                "secretion_rate_TNFa": 0.07,
+                "g_tnf_TNFa": 0.0002,
+                "pca_TNFa": 1.0,
+                "pna_TNFa": 0.1,
+                "pk_TNFa": 0.08,
+                "geometry_scale_mode_TNFa": 1,
+                "reference_diameter_TNFa": 1.0,
+                "geometry_scaling_factor_TNFa": 1.0
+            }
+        }
+    }
+}
