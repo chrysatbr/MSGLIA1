@@ -1,0 +1,54 @@
+{
+    "Soma": {
+        "capacitance": { "PARAMETER": { "cm (uF/cm2)": 1.0 } },
+        "pas": { "PARAMETER": { "g_pas (S/cm2)": 0.0001, "e_pas (mV)": -70.0 } },
+        "na_ion": {}, "k_ion": {}, "ca_ion": {},
+        "TRPC6": { "PARAMETER": {
+            "g_max_TRPC6": 0.001, "plc_k_TRPC6": 0.3,
+            "tau_m_TRPC6": 2.0, "tau_h_TRPC6": 1.0,
+            "ca_half_TRPC6": 0.0005, "dag_tau_TRPC6": 1.5,
+            "m0_TRPC6": 0.01,
+            "pca_TRPC6": 0.71, "pna_TRPC6": 0.14, "pk_TRPC6": 0.14,
+            "density_scale_mode_TRPC6": 1, "density_scale_factor_TRPC6": 1.0
+        }}
+    },
+    "Dendrites": {
+        "capacitance": { "PARAMETER": { "cm (uF/cm2)": 1.0 } },
+        "pas": { "PARAMETER": { "g_pas (S/cm2)": 0.0001, "e_pas (mV)": -70.0 } },
+        "na_ion": {}, "k_ion": {}, "ca_ion": {},
+        "TRPC6": { "PARAMETER": {
+            "g_max_TRPC6": 0.001, "plc_k_TRPC6": 0.3,
+            "tau_m_TRPC6": 2.0, "tau_h_TRPC6": 1.0,
+            "ca_half_TRPC6": 0.0005, "dag_tau_TRPC6": 1.5,
+            "m0_TRPC6": 0.01,
+            "pca_TRPC6": 0.71, "pna_TRPC6": 0.14, "pk_TRPC6": 0.14,
+            "density_scale_mode_TRPC6": 1, "density_scale_factor_TRPC6": 1.0
+        }}
+    },
+    "Small Glia": {
+        "capacitance": { "PARAMETER": { "cm (uF/cm2)": 0.8 } },
+        "pas": { "PARAMETER": { "g_pas (S/cm2)": 0.0001, "e_pas (mV)": -85.0 } },
+        "na_ion": {}, "k_ion": {}, "ca_ion": {},
+        "TRPC6": { "PARAMETER": {
+            "g_max_TRPC6": 0.001, "plc_k_TRPC6": 0.3,
+            "tau_m_TRPC6": 2.0, "tau_h_TRPC6": 1.0,
+            "ca_half_TRPC6": 0.0005, "dag_tau_TRPC6": 1.5,
+            "m0_TRPC6": 0.01,
+            "pca_TRPC6": 0.71, "pna_TRPC6": 0.14, "pk_TRPC6": 0.14,
+            "density_scale_mode_TRPC6": 1, "density_scale_factor_TRPC6": 1.0
+        }}
+    },
+    "Large Glia": {
+        "capacitance": { "PARAMETER": { "cm (uF/cm2)": 0.8 } },
+        "pas": { "PARAMETER": { "g_pas (S/cm2)": 0.001, "e_pas (mV)": -85.0 } },
+        "na_ion": {}, "k_ion": {}, "ca_ion": {},
+        "TRPC6": { "PARAMETER": {
+            "g_max_TRPC6": 0.001, "plc_k_TRPC6": 0.3,
+            "tau_m_TRPC6": 2.0, "tau_h_TRPC6": 1.0,
+            "ca_half_TRPC6": 0.0005, "dag_tau_TRPC6": 1.5,
+            "m0_TRPC6": 0.01,
+            "pca_TRPC6": 0.71, "pna_TRPC6": 0.14, "pk_TRPC6": 0.14,
+            "density_scale_mode_TRPC6": 1, "density_scale_factor_TRPC6": 1.0
+        }}
+    }
+}

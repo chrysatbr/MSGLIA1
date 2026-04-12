@@ -1,0 +1,54 @@
+{
+    "Soma": {
+        "capacitance": { "PARAMETER": { "cm (uF/cm2)": 1.0 } },
+        "pas": { "PARAMETER": { "g_pas (S/cm2)": 0.0001, "e_pas (mV)": -70.0 } },
+        "na_ion": {}, "k_ion": {}, "ca_ion": {},
+        "TRPC1": { "PARAMETER": {
+            "g_max_TRPC1": 0.001, "plc_k_TRPC1": 0.8,
+            "tau_m_TRPC1": 3.0, "tau_h_TRPC1": 1.0, "ca_half_TRPC1": 0.0005,
+            "pca_TRPC1": 0.49, "pna_TRPC1": 0.27, "pk_TRPC1": 0.24,
+            "er_tau_TRPC1": 2.0, "er_refill_TRPC1": 0.06, "stim1_th_TRPC1": 0.3,
+            "ca_local_tau_TRPC1": 0.5, "ca_local_gain_TRPC1": 0.005, "cai_eff_tau_TRPC1": 500.0,
+            "density_scale_mode_TRPC1": 1, "density_scale_factor_TRPC1": 1.0
+        }}
+    },
+    "Dendrites": {
+        "capacitance": { "PARAMETER": { "cm (uF/cm2)": 1.0 } },
+        "pas": { "PARAMETER": { "g_pas (S/cm2)": 0.0001, "e_pas (mV)": -70.0 } },
+        "na_ion": {}, "k_ion": {}, "ca_ion": {},
+        "TRPC1": { "PARAMETER": {
+            "g_max_TRPC1": 0.001, "plc_k_TRPC1": 0.8,
+            "tau_m_TRPC1": 3.0, "tau_h_TRPC1": 1.0, "ca_half_TRPC1": 0.0005,
+            "pca_TRPC1": 0.49, "pna_TRPC1": 0.27, "pk_TRPC1": 0.24,
+            "er_tau_TRPC1": 2.0, "er_refill_TRPC1": 0.06, "stim1_th_TRPC1": 0.3,
+            "ca_local_tau_TRPC1": 0.5, "ca_local_gain_TRPC1": 0.005, "cai_eff_tau_TRPC1": 500.0,
+            "density_scale_mode_TRPC1": 1, "density_scale_factor_TRPC1": 1.0
+        }}
+    },
+    "Small Glia": {
+        "capacitance": { "PARAMETER": { "cm (uF/cm2)": 0.8 } },
+        "pas": { "PARAMETER": { "g_pas (S/cm2)": 0.0001, "e_pas (mV)": -85.0 } },
+        "na_ion": {}, "k_ion": {}, "ca_ion": {},
+        "TRPC1": { "PARAMETER": {
+            "g_max_TRPC1": 0.001, "plc_k_TRPC1": 0.8,
+            "tau_m_TRPC1": 3.0, "tau_h_TRPC1": 1.0, "ca_half_TRPC1": 0.0005,
+            "pca_TRPC1": 0.49, "pna_TRPC1": 0.27, "pk_TRPC1": 0.24,
+            "er_tau_TRPC1": 2.0, "er_refill_TRPC1": 0.06, "stim1_th_TRPC1": 0.3,
+            "ca_local_tau_TRPC1": 0.5, "ca_local_gain_TRPC1": 0.005, "cai_eff_tau_TRPC1": 500.0,
+            "density_scale_mode_TRPC1": 1, "density_scale_factor_TRPC1": 1.0
+        }}
+    },
+    "Large Glia": {
+        "capacitance": { "PARAMETER": { "cm (uF/cm2)": 0.8 } },
+        "pas": { "PARAMETER": { "g_pas (S/cm2)": 0.001, "e_pas (mV)": -85.0 } },
+        "na_ion": {}, "k_ion": {}, "ca_ion": {},
+        "TRPC1": { "PARAMETER": {
+            "g_max_TRPC1": 0.001, "plc_k_TRPC1": 0.8,
+            "tau_m_TRPC1": 3.0, "tau_h_TRPC1": 1.0, "ca_half_TRPC1": 0.0005,
+            "pca_TRPC1": 0.49, "pna_TRPC1": 0.27, "pk_TRPC1": 0.24,
+            "er_tau_TRPC1": 2.0, "er_refill_TRPC1": 0.06, "stim1_th_TRPC1": 0.3,
+            "ca_local_tau_TRPC1": 0.5, "ca_local_gain_TRPC1": 0.005, "cai_eff_tau_TRPC1": 500.0,
+            "density_scale_mode_TRPC1": 1, "density_scale_factor_TRPC1": 1.0
+        }}
+    }
+}
