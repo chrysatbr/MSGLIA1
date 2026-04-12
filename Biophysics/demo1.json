@@ -1,0 +1,158 @@
+{
+    "Soma": {
+        "capacitance": {},
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 0.0001
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "IL1b": {},
+        "IL6": {},
+        "Piezo1": {},
+        "Piezo2": {},
+        "TNFa": {},
+        "trpa1": {},
+        "TRPC1": {
+            "PARAMETER": {
+                "g_max_TRPC1 (S/cm2)": 0.0002,
+                "ca_half_TRPC1 (mM)": 0.002,
+                "plc_k_TRPC1": 0.3
+            }
+        },
+        "TRPC3": {},
+        "TRPC6": {},
+        "TRPV4": {}
+    },
+    "Dendrites": {
+        "capacitance": {},
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": 0.0001
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "IL1b": {},
+        "IL6": {},
+        "Piezo1": {},
+        "Piezo2": {},
+        "TNFa": {},
+        "trpa1": {},
+        "TRPC1": {
+            "PARAMETER": {
+                "g_max_TRPC1 (S/cm2)": 0.0002,
+                "ca_half_TRPC1 (mM)": 0.002,
+                "plc_k_TRPC1": 0.3
+            }
+        },
+        "TRPC3": {},
+        "TRPC6": {},
+        "TRPV4": {}
+    },
+    "Secondary Branch": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 0.8
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "e_pas (mV)": -85.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "IL1b": {},
+        "IL6": {},
+        "Piezo1": {},
+        "Piezo2": {},
+        "TNFa": {},
+        "trpa1": {},
+        "TRPC1": {
+            "PARAMETER": {
+                "g_max_TRPC1 (S/cm2)": 0.0002,
+                "ca_half_TRPC1 (mM)": 0.002,
+                "plc_k_TRPC1": 0.3
+            }
+        },
+        "TRPC3": {},
+        "TRPC6": {},
+        "TRPV4": {}
+    },
+    "Primary Process": {
+        "capacitance": {
+            "PARAMETER": {
+                "cm (uF/cm2)": 0.8
+            }
+        },
+        "pas": {
+            "PARAMETER": {
+                "g_pas (S/cm2)": {
+                    "inhom_model": {
+                        "distFuncHelper": {
+                            "hocTemplateName": "VerbatimDistFuncHelper",
+                            "distFuncCatIdx": 4,
+                            "distFuncIdx": 16,
+                            "vecOfVals": [
+                                0.0003917716628242957,
+                                0.00042553250004348996,
+                                0.00042578702619541265,
+                                0.00024810564301223394,
+                                0.00024374946819953467,
+                                0.000290893715629733,
+                                0.0004493378847197976,
+                                0.0003280300506370765,
+                                0.00024269981211693468,
+                                0.00044835571319509944,
+                                0.0004052489017068654,
+                                0.0004434918463725726,
+                                0.0002920106697971036,
+                                0.00031245736389454853,
+                                0.00043652434583598727,
+                                0.0003927445693352062,
+                                0.00027049584289231366,
+                                0.0002738305034044518,
+                                0.0003813951458496182,
+                                0.0004377010852910191,
+                                0.0003521566213144271,
+                                0.0002866845094386137,
+                                0.00031060867121569276,
+                                0.00038259714282721775,
+                                0.00027786576621013524,
+                                0.00044639429630807727,
+                                0.0002507323587732351
+                            ],
+                            "listOfStrs": []
+                        },
+                        "segmentationHelper": null
+                    }
+                },
+                "e_pas (mV)": -85.0
+            }
+        },
+        "na_ion": {},
+        "k_ion": {},
+        "ca_ion": {},
+        "IL1b": {},
+        "IL6": {},
+        "Piezo1": {},
+        "Piezo2": {},
+        "TNFa": {},
+        "trpa1": {},
+        "TRPC1": {
+            "PARAMETER": {
+                "g_max_TRPC1 (S/cm2)": 0.0002,
+                "ca_half_TRPC1 (mM)": 0.002,
+                "plc_k_TRPC1": 0.3
+            }
+        },
+        "TRPC3": {},
+        "TRPC6": {},
+        "TRPV4": {}
+    }
+}

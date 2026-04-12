@@ -9,10 +9,40 @@
         "na_ion": {},
         "k_ion": {},
         "ca_ion": {},
-        "IL1b": {},
-        "IL6": {},
         "Piezo1": {},
-        "TNFa": {}
+        "Piezo2": {},
+        "trpa1": {},
+        "TRPV4": {
+            "PARAMETER": {
+                "tau_expression_TRPV4": 86400000.0,
+                "tnfa_sensitivity_TRPV4": 0.5,
+                "tnfa_threshold_trpv4_TRPV4": 1.0,
+                "inflammatory_sensitivity_TRPV4": 0.3,
+                "atp_production_rate_TRPV4": 0.01,
+                "atp_decay_rate_TRPV4": 0.05,
+                "atp_sensitivity_TRPV4": 0.4,
+                "tau_activation_TRPV4": 100.0,
+                "tau_deactivation_TRPV4": 500.0,
+                "nfkb_activation_rate_TRPV4": 0.08,
+                "nfkb_decay_rate_TRPV4": 0.015,
+                "nfkb_threshold_TRPV4": 0.05,
+                "tau_nfkb_TRPV4": 3600000.0,
+                "cldn5_inflammatory_loss_TRPV4": 0.3,
+                "tau_junction_proteins_TRPV4": 7200000.0,
+                "vecad_inflammatory_loss_TRPV4": 0.2,
+                "tau_adhesion_molecules_TRPV4": 14400000.0,
+                "icam1_inflammatory_gain_TRPV4": 5.0,
+                "icam1_trpv4_modulation_TRPV4": 0.4,
+                "vcam1_inflammatory_gain_TRPV4": 8.0,
+                "vcam1_trpv4_modulation_TRPV4": 0.5,
+                "ccl2_baseline_TRPV4": 0.1,
+                "ccl2_nfkb_dependence_TRPV4": 2.0,
+                "ccl2_decay_rate_TRPV4": 0.0001,
+                "ccl5_baseline_TRPV4": 0.05,
+                "ccl5_inflammatory_gain_TRPV4": 3.0,
+                "ccl5_decay_rate_TRPV4": 0.0001
+            }
+        }
     },
     "Dendrites": {
         "capacitance": {},
@@ -24,12 +54,43 @@
         "na_ion": {},
         "k_ion": {},
         "ca_ion": {},
-        "IL1b": {},
-        "IL6": {},
         "Piezo1": {},
-        "TNFa": {}
+        "Piezo2": {},
+        "trpa1": {},
+        "TRPV4": {
+            "PARAMETER": {
+                "density_scale_factor_TRPV4": 0.8,
+                "tau_expression_TRPV4": 86400000.0,
+                "tnfa_sensitivity_TRPV4": 0.5,
+                "tnfa_threshold_trpv4_TRPV4": 1.0,
+                "inflammatory_sensitivity_TRPV4": 0.3,
+                "atp_production_rate_TRPV4": 0.01,
+                "atp_decay_rate_TRPV4": 0.05,
+                "atp_sensitivity_TRPV4": 0.4,
+                "tau_activation_TRPV4": 100.0,
+                "tau_deactivation_TRPV4": 500.0,
+                "nfkb_activation_rate_TRPV4": 0.08,
+                "nfkb_decay_rate_TRPV4": 0.015,
+                "nfkb_threshold_TRPV4": 0.05,
+                "tau_nfkb_TRPV4": 3600000.0,
+                "cldn5_inflammatory_loss_TRPV4": 0.3,
+                "tau_junction_proteins_TRPV4": 7200000.0,
+                "vecad_inflammatory_loss_TRPV4": 0.2,
+                "tau_adhesion_molecules_TRPV4": 14400000.0,
+                "icam1_inflammatory_gain_TRPV4": 5.0,
+                "icam1_trpv4_modulation_TRPV4": 0.4,
+                "vcam1_inflammatory_gain_TRPV4": 8.0,
+                "vcam1_trpv4_modulation_TRPV4": 0.5,
+                "ccl2_baseline_TRPV4": 0.1,
+                "ccl2_nfkb_dependence_TRPV4": 2.0,
+                "ccl2_decay_rate_TRPV4": 0.0001,
+                "ccl5_baseline_TRPV4": 0.05,
+                "ccl5_inflammatory_gain_TRPV4": 3.0,
+                "ccl5_decay_rate_TRPV4": 0.0001
+            }
+        }
     },
-    "Small Glia": {
+    "Secondary Branch": {
         "capacitance": {
             "PARAMETER": {
                 "cm (uF/cm2)": 0.8
@@ -37,19 +98,48 @@
         },
         "pas": {
             "PARAMETER": {
-                "g_pas (S/cm2)": 0.0001,
                 "e_pas (mV)": -85.0
             }
         },
         "na_ion": {},
         "k_ion": {},
         "ca_ion": {},
-        "IL1b": {},
-        "IL6": {},
         "Piezo1": {},
-        "TNFa": {}
+        "Piezo2": {},
+        "trpa1": {},
+        "TRPV4": {
+            "PARAMETER": {
+                "tau_expression_TRPV4": 86400000.0,
+                "tnfa_sensitivity_TRPV4": 0.5,
+                "tnfa_threshold_trpv4_TRPV4": 1.0,
+                "inflammatory_sensitivity_TRPV4": 0.3,
+                "atp_production_rate_TRPV4": 0.01,
+                "atp_decay_rate_TRPV4": 0.05,
+                "atp_sensitivity_TRPV4": 0.4,
+                "tau_activation_TRPV4": 100.0,
+                "tau_deactivation_TRPV4": 500.0,
+                "nfkb_activation_rate_TRPV4": 0.08,
+                "nfkb_decay_rate_TRPV4": 0.015,
+                "nfkb_threshold_TRPV4": 0.05,
+                "tau_nfkb_TRPV4": 3600000.0,
+                "cldn5_inflammatory_loss_TRPV4": 0.3,
+                "tau_junction_proteins_TRPV4": 7200000.0,
+                "vecad_inflammatory_loss_TRPV4": 0.2,
+                "tau_adhesion_molecules_TRPV4": 14400000.0,
+                "icam1_inflammatory_gain_TRPV4": 5.0,
+                "icam1_trpv4_modulation_TRPV4": 0.4,
+                "vcam1_inflammatory_gain_TRPV4": 8.0,
+                "vcam1_trpv4_modulation_TRPV4": 0.5,
+                "ccl2_baseline_TRPV4": 0.1,
+                "ccl2_nfkb_dependence_TRPV4": 2.0,
+                "ccl2_decay_rate_TRPV4": 0.0001,
+                "ccl5_baseline_TRPV4": 0.05,
+                "ccl5_inflammatory_gain_TRPV4": 3.0,
+                "ccl5_decay_rate_TRPV4": 0.0001
+            }
+        }
     },
-    "Large Glia": {
+    "Primary Process": {
         "capacitance": {
             "PARAMETER": {
                 "cm (uF/cm2)": 0.8
@@ -57,15 +147,64 @@
         },
         "pas": {
             "PARAMETER": {
+                "g_pas (S/cm2)": {
+                    "inhom_model": {
+                        "distFuncHelper": {
+                            "hocTemplateName": "VerbatimDistFuncHelper",
+                            "distFuncCatIdx": 4,
+                            "distFuncIdx": 16,
+                            "vecOfVals": [
+                                0.0003917716628242957,
+                                0.00042553250004348996,
+                                0.00042578702619541265,
+                                0.00024810564301223394,
+                                0.00024374946819953467,
+                                0.000290893715629733
+                            ],
+                            "listOfStrs": []
+                        },
+                        "segmentationHelper": null
+                    }
+                },
                 "e_pas (mV)": -85.0
             }
         },
         "na_ion": {},
         "k_ion": {},
         "ca_ion": {},
-        "IL1b": {},
-        "IL6": {},
         "Piezo1": {},
-        "TNFa": {}
+        "Piezo2": {},
+        "trpa1": {},
+        "TRPV4": {
+            "PARAMETER": {
+                "tau_expression_TRPV4": 86400000.0,
+                "tnfa_sensitivity_TRPV4": 0.5,
+                "tnfa_threshold_trpv4_TRPV4": 1.0,
+                "inflammatory_sensitivity_TRPV4": 0.3,
+                "atp_production_rate_TRPV4": 0.01,
+                "atp_decay_rate_TRPV4": 0.05,
+                "atp_sensitivity_TRPV4": 0.4,
+                "tau_activation_TRPV4": 100.0,
+                "tau_deactivation_TRPV4": 500.0,
+                "nfkb_activation_rate_TRPV4": 0.08,
+                "nfkb_decay_rate_TRPV4": 0.015,
+                "nfkb_threshold_TRPV4": 0.05,
+                "tau_nfkb_TRPV4": 3600000.0,
+                "cldn5_inflammatory_loss_TRPV4": 0.3,
+                "tau_junction_proteins_TRPV4": 7200000.0,
+                "vecad_inflammatory_loss_TRPV4": 0.2,
+                "tau_adhesion_molecules_TRPV4": 14400000.0,
+                "icam1_inflammatory_gain_TRPV4": 5.0,
+                "icam1_trpv4_modulation_TRPV4": 0.4,
+                "vcam1_inflammatory_gain_TRPV4": 8.0,
+                "vcam1_trpv4_modulation_TRPV4": 0.5,
+                "ccl2_baseline_TRPV4": 0.1,
+                "ccl2_nfkb_dependence_TRPV4": 2.0,
+                "ccl2_decay_rate_TRPV4": 0.0001,
+                "ccl5_baseline_TRPV4": 0.05,
+                "ccl5_inflammatory_gain_TRPV4": 3.0,
+                "ccl5_decay_rate_TRPV4": 0.0001
+            }
+        }
     }
 }
