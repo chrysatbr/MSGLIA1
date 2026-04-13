@@ -33,6 +33,10 @@ sourcePythonCode("\\Sims\\Common\\SimLocalFieldPotential", "from SimLocalFieldPo
 { load_file("Sims/Common/SimIL6.hoc") }
 { load_file("Sims/Common/SimTRPV4.hoc") }
 { load_file("Sims/Common/SimTRPA1.hoc") }
+{ load_file("Sims/Common/SimTRPC1.hoc") }
+{ load_file("Sims/Common/SimTRPC3.hoc") }
+{ load_file("Sims/Common/SimTRPC6.hoc") }
+
 
 // Focused Ultrasound Stimulation simulations
 { load_file("Sims/Common/SimFUSSinglePulse.hoc") }

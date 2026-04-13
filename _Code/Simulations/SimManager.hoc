@@ -11,7 +11,7 @@ begintemplate SimulationManager
     public simCatIdx, programmaticClick
     
     external isAstrocyteOrNeuron, isAstrocyte, isMicroglia, isNeuron, isGlialCell
-    external InsertElectricMechanisms, InsertGlutamateMechanisms, InsertPotassiumMechanisms, InsertPiezo1Mechanisms, InsertPiezo2Mechanisms, InsertTNFaMechanisms, InsertIL1bMechanisms, InsertIL6Mechanisms, InsertTRPV4Mechanisms, InsertTRPA1Mechanisms, InsertFUSMechanisms
+    external InsertElectricMechanisms, InsertGlutamateMechanisms, InsertPotassiumMechanisms, InsertPiezo1Mechanisms, InsertPiezo2Mechanisms, InsertTNFaMechanisms, InsertIL1bMechanisms, InsertIL6Mechanisms, InsertTRPV4Mechanisms, InsertTRPA1Mechanisms, InsertFUSMechanisms, InsertTRPC1Mechanisms, InsertTRPC3Mechanisms, InsertTRPC6Mechanisms 
     external showIntegratesWithAltRunControlMsg, deployDefaultProcAdvance, deployCustomProcAdvance, stringEmpty, dismissIfNotNil, codeContractViolation
     external mainUiLocker, mmIcrHelper, beih, mwh, pyObj
     external altRunControlWidget, iodManagerMainWidget, extraCellsManagerWidget
@@ -33,7 +33,7 @@ begintemplate SimulationManager
     
     proc init() { local numSims
         
-        numSims = 25
+        numSims = 28
         
         objref simIdxToWidget[numSims]
         if (isNeuron()) {
@@ -60,7 +60,9 @@ begintemplate SimulationManager
         simIdxToWidget[17] = new SimIL6()
 	simIdxToWidget[18] = new SimPiezo2()
 	simIdxToWidget[19] = new SimTRPA1()
-	
+	simIdxToWidget[23] = new SimTRPC1()
+	simIdxToWidget[25] = new SimTRPC3()
+	simIdxToWidget[26] = new SimTRPC6()
 	 // Focused Ultrasound Stimulation simulations
         simIdxToWidget[20] = new SimFUSSinglePulse()
         simIdxToWidget[21] = new SimFUSPulsed()
@@ -69,7 +71,7 @@ begintemplate SimulationManager
 	
         
 	if (isNeuron()) {
-            simIdxToWidget[23] = pyObj.SimMyelinatedAxon()
+            simIdxToWidget[24] = pyObj.SimMyelinatedAxon()
         }
         
         simCatIdx = 0
@@ -163,7 +165,7 @@ begintemplate SimulationManager
             insertSpacer()
             if (isNeuron()) {
                 xlabel("Axon model with myelin sheath and K+ radial diffusion")
-                createSimStateButton("Axon simulation", 23)
+                createSimStateButton("Axon simulation", 24)
                 insertSpacer()
             }
            xpanel()
@@ -179,6 +181,13 @@ begintemplate SimulationManager
 	   insertSpacer()
            xlabel("TRPA1 mechanosensitive channel")
            createSimStateButton("Dynamics of TRPA1 channel", 19)
+	   insertSpacer()
+           xlabel("TRPC1 mechanosensitive channel")
+           createSimStateButton("Dynamics of TRPC1 channel", 23)
+	   xlabel("TRPC3 mechanosensitive channel")
+           createSimStateButton("Dynamics of TRPC3 channel", 25)
+	   xlabel("TRPC6 mechanosensitive channel")
+           createSimStateButton("Dynamics of TRPC6 channel", 26)
 	   
            xpanel()
 	   xpanel("")
@@ -383,6 +392,15 @@ begintemplate SimulationManager
             isRescanRequired = 1
         }else if (simIdx == 19) {  
             InsertTRPA1Mechanisms()
+            isRescanRequired = 1
+	}else if (simIdx == 23) {  
+            InsertTRPC1Mechanisms()
+            isRescanRequired = 1
+	}else if (simIdx == 25) {  
+            InsertTRPC3Mechanisms()
+            isRescanRequired = 1
+	}else if (simIdx == 26) {  
+            InsertTRPC6Mechanisms()
             isRescanRequired = 1
         } else if (simIdx == 20 || simIdx == 21 || simIdx == 22) {
             InsertFUSMechanisms()

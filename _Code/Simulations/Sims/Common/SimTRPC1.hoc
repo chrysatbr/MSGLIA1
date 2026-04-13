@@ -1,0 +1,675 @@
+// ==============================================================================
+// SimTRPC1_Microglia.hoc
+// ==============================================================================
+// TRPC1 SOCE simulation for microglia. 1 ms = 1 min real time.
+//
+// Pattern mirrors SimPiezo1.hoc exactly:
+//   - Global variables (g_max_global_TRPC1, plc_k_global_TRPC1, scale_mode_global_TRPC1)
+//   - Global proc updateTRPC1Params() pushes globals to all sections
+//   - UI xpvalue fields call updateTRPC1Params() on change (like updateGeometryMode())
+//   - initParamsTRPC1() auto-detects morphology and sets the global vars
+//   - preRun() calls initParamsTRPC1() + updateTRPC1Params() before every Run
+//
+// Morphology auto-detection (from .swc diam):
+//   meanDiam <  1.0 um -> RESTED    (g_max=0.0002, plc_k=0.15, scale_mode=0)
+//   meanDiam >= 1.0 um -> ACTIVATED (g_max=0.001,  plc_k=0.8,  scale_mode=1)
+//   areaScale = clamp(1200 / totalArea, 0.3, 3.0)
+// ==============================================================================
+
+
+// ── GLOBAL VARIABLES (like density_global / density_scale_mode_global in Piezo1) ──
+g_max_global_TRPC1      = 0.001    // base value at diam=1.0 um (scales with diam in MOD)
+plc_k_global_TRPC1      = 0.2      // base value at diam=1.0 um (scales with diam in MOD)
+scale_mode_global_TRPC1 = 1        // mode=1: linear with diam -- same for all cells
+diam_threshold_TRPC1    = 1.0      // kept for UI display, no longer used for classification
+
+
+// ── GLOBAL PROCS (like updateGeometryMode() / updateChannelDensity() in Piezo1) ──
+
+// Push global vars to ALL TRPC1 sections — call this whenever globals change
+proc updateTRPC1Params() {
+    forall {
+        if (ismembrane("TRPC1")) {
+            g_max_TRPC1               = g_max_global_TRPC1
+            plc_k_TRPC1               = plc_k_global_TRPC1
+            density_scale_mode_TRPC1  = scale_mode_global_TRPC1
+            density_scale_factor_TRPC1 = 1.0
+        }
+    }
+}
+
+// Apply current globals to all sections.
+// No classification needed -- the MOD scales both g_max and plc_k
+// with local diam automatically (mode=1), so different morphologies
+// give different results without any manual switching.
+proc autoDetectTRPC1() {
+    updateTRPC1Params()
+}
+
+
+// ── TEMPLATE ──────────────────────────────────────────────────────────────────
+proc TRPC1Iteration() { }
+
+func dist2D_PtToPt_squared_trpc1() {
+    return ($1-$3)*($1-$3) + ($2-$4)*($2-$4)
+}
+
+begintemplate SimTRPC1
+
+    public preShowCheck, show, preRun, preContinue, advance, postRun, simDismissHandler
+    public biophysJsonFileNameOrEmpty, isCustomProcAdvance, isAltRunControl
+    public PX, PY, PZ, R_STIM, TimeBegin, MaxTNFa, PX2, Tau1, Tau2
+    public AgonistConc, AntagonistConc
+
+    external TRPC1Iteration
+    external seClampHelper
+    external altRunControlWidget
+    external tstop
+    external removeItemFromList, unmapIfNotNil
+    external dendrite_ref
+    external graphList, fast_flush_list
+    external g_max_global_TRPC1, plc_k_global_TRPC1
+    external scale_mode_global_TRPC1, diam_threshold_TRPC1
+    external updateTRPC1Params, autoDetectTRPC1
+
+    strdef biophysJsonFileNameOrEmpty
+    isCustomProcAdvance = -1
+    isAltRunControl     = -1
+    strdef outTxtFileRelPathName
+
+    objref vBoxTRPC1Main
+    objref vBoxGraphSEClamp, vBoxGraphTNFa, vBoxGraphExpression, vBoxGraphOpenProb
+    objref vBoxGraphCldn5, vBoxGraphNFkB, vBoxGraphICAM1, vBoxGraphCCL2
+    objref vBoxGraphIca, vBoxGraphIna, vBoxGraphIk, vBoxGraphItrpc1
+    objref vBoxGraphSTIM1, vBoxGraphERCa, vBoxGraphNFAT, vBoxGraphCDI
+    objref vBoxPlotShapeVoltage, vBoxPlotShapeTNFa, vBoxPlotShapeTRPC1
+    objref vBoxPlotShapeIca, vBoxPlotShapeIna, vBoxPlotShapeIk
+    objref vBoxPlotShapeItrpc1, vBoxPlotShapeOpenProb
+    objref graphSEClamp, graphTNFa, graphExpression, graphOpenProb
+    objref graphCldn5, graphNFkB, graphICAM1, graphCCL2
+    objref graphIca, graphIna, graphIk, graphItrpc1
+    objref graphSTIM1, graphERCa, graphNFAT, graphCDI
+    objref plotShapeVoltage, plotShapeTNFa, plotShapeTRPC1
+    objref plotShapeIca, plotShapeIna, plotShapeIk, plotShapeItrpc1, plotShapeOpenProb
+    objref fileTRPC1Results
+
+    proc init() {
+        biophysJsonFileNameOrEmpty = ""
+        isCustomProcAdvance = 1
+        isAltRunControl     = 1
+        outTxtFileRelPathName = "Text results/TRPC1_microglia_dynamics.txt"
+        fileTRPC1Results = new File()
+    }
+
+    func preShowCheck() { return 0 }
+
+    proc show() {
+        initIonConcentrations()
+        initParamsTRPC1()
+        seClampHelper.deployClamp(0)
+        showTRPC1Ui()
+    }
+
+    proc initIonConcentrations() {
+        forall {
+            if (ismembrane("TRPC1")) {
+                cai=0.0001  nai=10   ki=140
+                cao=2.0     nao=145  ko=5
+            }
+        }
+    }
+
+    proc advance() {
+        fadvance()
+        TRPC1Iteration(PX, PY, R_STIM, TimeBegin, Tau1, MaxTNFa, \
+                       PX2, Tau2, PZ, AgonistConc, AntagonistConc)
+
+        graphSEClamp.exec_menu("View = plot")
+        graphTNFa.exec_menu("View = plot")
+        graphExpression.exec_menu("View = plot")
+        graphOpenProb.exec_menu("View = plot")
+        graphCldn5.exec_menu("View = plot")
+        graphNFkB.exec_menu("View = plot")
+        graphICAM1.exec_menu("View = plot")
+        graphCCL2.exec_menu("View = plot")
+        graphIca.exec_menu("View = plot")
+        graphIna.exec_menu("View = plot")
+        graphIk.exec_menu("View = plot")
+        graphItrpc1.exec_menu("View = plot")
+        graphSTIM1.exec_menu("View = plot")
+        graphERCa.exec_menu("View = plot")
+        graphNFAT.exec_menu("View = plot")
+        graphCDI.exec_menu("View = plot")
+        plotShapeTNFa.exec_menu("View = plot")
+        plotShapeTRPC1.exec_menu("View = plot")
+        plotShapeIca.exec_menu("View = plot")
+        plotShapeIna.exec_menu("View = plot")
+        plotShapeIk.exec_menu("View = plot")
+        plotShapeItrpc1.exec_menu("View = plot")
+        plotShapeOpenProb.exec_menu("View = plot")
+
+        fileTRPC1Results.printf( \
+            "%-8.3f\t%-8.5g\t%-8.5g\t%-8.5g\t%-8.5g\t%-8.5g\t%-8.5g\t%-8.5g\t%-8.5g\t%-8.5g\t%-8.5g\n", \
+            t, \
+            dendrite_ref.o(0).sec.v(0.5), \
+            dendrite_ref.o(0).sec.tnfa_TRPC1(0.5), \
+            dendrite_ref.o(0).sec.m_TRPC1(0.5), \
+            dendrite_ref.o(0).sec.h_TRPC1(0.5), \
+            dendrite_ref.o(0).sec.er_TRPC1(0.5), \
+            dendrite_ref.o(0).sec.stim1_TRPC1(0.5), \
+            dendrite_ref.o(0).sec.ica(0.5), \
+            dendrite_ref.o(0).sec.ina(0.5), \
+            dendrite_ref.o(0).sec.ik(0.5), \
+            dendrite_ref.o(0).sec.itotal_TRPC1(0.5))
+    }
+
+    // preRun: auto-detect morphology and apply params before every Run
+    // Mirrors how Piezo1 works: the MOD handles per-segment scaling,
+    // we just need to set the correct base values.
+    proc preRun() {
+        autoDetectTRPC1()
+        fileTRPC1Results.wopen(outTxtFileRelPathName)
+        fileTRPC1Results.printf("# TRPC1 Microglia SOCE Simulation Results\n")
+        fileTRPC1Results.printf("# 1 ms = 1 minute real time\n")
+        fileTRPC1Results.printf("# Columns: time(ms) voltage(mV) tnfa(pg/ml) m h er stim1 ica ina ik itotal (mA/cm2)\n")
+    }
+
+    proc preContinue() { fileTRPC1Results.aopen(outTxtFileRelPathName) }
+    proc postRun()     { fileTRPC1Results.close() }
+
+    proc simDismissHandler() {
+        removeItemFromList(graphList[1], graphTNFa)
+        removeItemFromList(graphList[1], graphSEClamp)
+        removeItemFromList(graphList[1], graphExpression)
+        removeItemFromList(graphList[1], graphOpenProb)
+        removeItemFromList(graphList[1], graphCldn5)
+        removeItemFromList(graphList[1], graphNFkB)
+        removeItemFromList(graphList[1], graphICAM1)
+        removeItemFromList(graphList[1], graphCCL2)
+        removeItemFromList(graphList[1], graphIca)
+        removeItemFromList(graphList[1], graphIna)
+        removeItemFromList(graphList[1], graphIk)
+        removeItemFromList(graphList[1], graphItrpc1)
+        removeItemFromList(graphList[1], graphSTIM1)
+        removeItemFromList(graphList[1], graphERCa)
+        removeItemFromList(graphList[1], graphNFAT)
+        removeItemFromList(graphList[1], graphCDI)
+        removeItemFromList(fast_flush_list, plotShapeTNFa)
+        removeItemFromList(fast_flush_list, plotShapeVoltage)
+        removeItemFromList(fast_flush_list, plotShapeTRPC1)
+        removeItemFromList(fast_flush_list, plotShapeIca)
+        removeItemFromList(fast_flush_list, plotShapeIna)
+        removeItemFromList(fast_flush_list, plotShapeIk)
+        removeItemFromList(fast_flush_list, plotShapeItrpc1)
+        removeItemFromList(fast_flush_list, plotShapeOpenProb)
+        unmapIfNotNil(vBoxTRPC1Main)
+        unmapIfNotNil(vBoxGraphSEClamp)
+        unmapIfNotNil(vBoxGraphTNFa)
+        unmapIfNotNil(vBoxGraphExpression)
+        unmapIfNotNil(vBoxGraphOpenProb)
+        unmapIfNotNil(vBoxGraphCldn5)
+        unmapIfNotNil(vBoxGraphNFkB)
+        unmapIfNotNil(vBoxGraphICAM1)
+        unmapIfNotNil(vBoxGraphCCL2)
+        unmapIfNotNil(vBoxGraphIca)
+        unmapIfNotNil(vBoxGraphIna)
+        unmapIfNotNil(vBoxGraphIk)
+        unmapIfNotNil(vBoxGraphItrpc1)
+        unmapIfNotNil(vBoxGraphSTIM1)
+        unmapIfNotNil(vBoxGraphERCa)
+        unmapIfNotNil(vBoxGraphNFAT)
+        unmapIfNotNil(vBoxGraphCDI)
+        unmapIfNotNil(vBoxPlotShapeVoltage)
+        unmapIfNotNil(vBoxPlotShapeTNFa)
+        unmapIfNotNil(vBoxPlotShapeTRPC1)
+        unmapIfNotNil(vBoxPlotShapeIca)
+        unmapIfNotNil(vBoxPlotShapeIna)
+        unmapIfNotNil(vBoxPlotShapeIk)
+        unmapIfNotNil(vBoxPlotShapeItrpc1)
+        unmapIfNotNil(vBoxPlotShapeOpenProb)
+        seClampHelper.removeClamp()
+    }
+
+    // Sets stimulation parameters (not channel params — those are handled globally)
+    proc initParamsTRPC1() {
+        PX=0  PY=-20  PZ=0  PX2=0
+        R_STIM=10.0  TimeBegin=100  Tau1=30  Tau2=300
+        MaxTNFa=10.0  AgonistConc=0  AntagonistConc=0
+    }
+
+    proc showTRPC1Ui() {
+        vBoxTRPC1Main = new VBox()
+        vBoxTRPC1Main.intercept(1)
+        {
+            xpanel("")
+            xlabel("========= TRPC1 SOCE Channel - Microglia Simulation =========")
+            xlabel("================================================================")
+            xpvalue("X coordinate (um)",         &PX,        1)
+            xpvalue("Y coordinate (um)",         &PY,        1)
+            xpvalue("Z coordinate (um)",         &PZ,        1)
+            xpvalue("Stimulation radius (um)",   &R_STIM,    1)
+            xpvalue("Stimulation onset (ms)",    &TimeBegin, 1)
+            xpvalue("Maximum TNFa (pg/ml)",      &MaxTNFa,   1)
+            xpvalue("Tau rise (ms)",             &Tau1,      1)
+            xpvalue("Tau decay (ms)",            &Tau2,      1)
+            xlabel("================================================================")
+            xlabel("============== Pharmacological Modulation ==============")
+            xpvalue("TRPC1 Agonist (OAG, uM)",         &AgonistConc,    1)
+            xpvalue("TRPC1 Antagonist (SKF96365, uM)",  &AntagonistConc, 1)
+            xpanel(625,164)
+
+            xpanel("")
+            xlabel("======== TRPC1 Channel Parameters (like Piezo1) ========")
+            xpvalue("g_max (S/cm2)",                   &g_max_global_TRPC1,      1, "updateTRPC1Params()")
+            xpvalue("plc_k",                           &plc_k_global_TRPC1,      1, "updateTRPC1Params()")
+            xpvalue("Scale mode (0=uniform 1=linear)", &scale_mode_global_TRPC1, 1, "updateTRPC1Params()")
+            xpvalue("DIAM threshold (um)",             &diam_threshold_TRPC1,    1, "autoDetectTRPC1()")
+            xbutton("Re-detect morphology",                                          "autoDetectTRPC1()")
+            xlabel("=======================================================")
+            xpanel(625,164)
+
+            xpanel("")
+            xlabel("================== Voltage clamp of soma ==================")
+            xpvalue("Somatic voltage clamp (mV)", &seClampHelper.seClamp.amp1, 1)
+            xpvalue("Clamp duration (ms)",         &seClampHelper.seClamp.dur1, 1)
+            xlabel("--------------------------------------------------------------------------------")
+            xpvalue("Simulation time (ms)", &tstop, 1)
+            xbutton("Run simulation", "altRunControlWidget.initAndRunHandler()")
+            xpanel(328,129)
+        }
+        vBoxTRPC1Main.intercept(0)
+        vBoxTRPC1Main.map("TRPC1 SOCE settings", 195, 102, 400, 650)
+
+        // ROW 1: Voltage | TNFa | STIM1 | ER Ca
+        vBoxGraphSEClamp = new VBox()
+        vBoxGraphSEClamp.intercept(1)
+        {
+            graphSEClamp = new Graph(0)
+            graphList[1].append(graphSEClamp)
+            graphSEClamp.size(0,2500,-100,50)
+            graphSEClamp.view(0,-100,2500,150,50,100,350,180)
+            graphSEClamp.addvar("v(.5)",1,1,0.8,0.9,2)
+            graphSEClamp.label(0.5,0.95,"Membrane Potential",2,1,0,1,1)
+        }
+        vBoxGraphSEClamp.intercept(0)
+        vBoxGraphSEClamp.map("Voltage vs Time",50,100,350,180)
+
+        vBoxGraphTNFa = new VBox()
+        vBoxGraphTNFa.intercept(1)
+        {
+            graphTNFa = new Graph(0)
+            graphList[1].append(graphTNFa)
+            graphTNFa.size(0,2500,0,15)
+            graphTNFa.view(0,0,2500,15,410,100,350,180)
+            graphTNFa.addvar("dendrite_ref.o(0).sec.tnfa_TRPC1(0.5)",2,1,0.8,0.9,2)
+            graphTNFa.label(0.5,0.95,"TNFa (pg/ml)",2,1,0,1,1)
+        }
+        vBoxGraphTNFa.intercept(0)
+        vBoxGraphTNFa.map("TNFa Concentration",410,100,350,180)
+
+        vBoxGraphSTIM1 = new VBox()
+        vBoxGraphSTIM1.intercept(1)
+        {
+            graphSTIM1 = new Graph(0)
+            graphList[1].append(graphSTIM1)
+            graphSTIM1.size(0,2500,0,1)
+            graphSTIM1.view(0,0,2500,1,770,100,350,180)
+            graphSTIM1.addvar("dendrite_ref.o(0).sec.stim1_TRPC1(0.5)",3,1,0.8,0.9,2)
+            graphSTIM1.label(0.5,0.95,"STIM1 (0-1)",2,1,0,1,1)
+        }
+        vBoxGraphSTIM1.intercept(0)
+        vBoxGraphSTIM1.map("STIM1 Activation",770,100,350,180)
+
+        vBoxGraphERCa = new VBox()
+        vBoxGraphERCa.intercept(1)
+        {
+            graphERCa = new Graph(0)
+            graphList[1].append(graphERCa)
+            graphERCa.size(0,2500,0,1)
+            graphERCa.view(0,0,2500,1,1130,100,350,180)
+            graphERCa.addvar("dendrite_ref.o(0).sec.er_TRPC1(0.5)",4,1,0.8,0.9,2)
+            graphERCa.label(0.5,0.95,"ER Ca2+ (0-1)",2,1,0,1,1)
+        }
+        vBoxGraphERCa.intercept(0)
+        vBoxGraphERCa.map("ER Calcium Store",1130,100,350,180)
+
+        // ROW 2: m | m | h | h
+        vBoxGraphExpression = new VBox()
+        vBoxGraphExpression.intercept(1)
+        {
+            graphExpression = new Graph(0)
+            graphList[1].append(graphExpression)
+            graphExpression.size(0,2500,0,1)
+            graphExpression.view(0,0,2500,1,50,290,350,180)
+            graphExpression.addvar("dendrite_ref.o(0).sec.m_TRPC1(0.5)",3,1,0.8,0.9,2)
+            graphExpression.label(0.5,0.95,"Open probability m",2,1,0,1,1)
+        }
+        vBoxGraphExpression.intercept(0)
+        vBoxGraphExpression.map("Open probability m",50,290,350,180)
+
+        vBoxGraphOpenProb = new VBox()
+        vBoxGraphOpenProb.intercept(1)
+        {
+            graphOpenProb = new Graph(0)
+            graphList[1].append(graphOpenProb)
+            graphOpenProb.size(0,2500,0,1)
+            graphOpenProb.view(0,0,2500,1,410,290,350,180)
+            graphOpenProb.addvar("dendrite_ref.o(0).sec.m_TRPC1(0.5)",4,1,0.8,0.9,2)
+            graphOpenProb.label(0.5,0.95,"TRPC1 open probability m",2,1,0,1,1)
+        }
+        vBoxGraphOpenProb.intercept(0)
+        vBoxGraphOpenProb.map("Open Prob (m)",410,290,350,180)
+
+        vBoxGraphNFkB = new VBox()
+        vBoxGraphNFkB.intercept(1)
+        {
+            graphNFkB = new Graph(0)
+            graphList[1].append(graphNFkB)
+            graphNFkB.size(0,2500,0,1)
+            graphNFkB.view(0,0,2500,1,770,290,350,180)
+            graphNFkB.addvar("dendrite_ref.o(0).sec.h_TRPC1(0.5)",5,1,0.8,0.9,2)
+            graphNFkB.label(0.5,0.95,"CDI gate h (proxy: NFkB)",2,1,0,1,1)
+        }
+        vBoxGraphNFkB.intercept(0)
+        vBoxGraphNFkB.map("CDI gate h",770,290,350,180)
+
+        vBoxGraphNFAT = new VBox()
+        vBoxGraphNFAT.intercept(1)
+        {
+            graphNFAT = new Graph(0)
+            graphList[1].append(graphNFAT)
+            graphNFAT.size(0,2500,0,1)
+            graphNFAT.view(0,0,2500,1,1130,290,350,180)
+            graphNFAT.addvar("dendrite_ref.o(0).sec.h_TRPC1(0.5)",6,1,0.8,0.9,2)
+            graphNFAT.label(0.5,0.95,"CDI gate h (proxy: NFAT)",2,1,0,1,1)
+        }
+        vBoxGraphNFAT.intercept(0)
+        vBoxGraphNFAT.map("CDI gate h (NFAT proxy)",1130,290,350,180)
+
+        // ROW 3: h | er | stim1 | m
+        vBoxGraphCDI = new VBox()
+        vBoxGraphCDI.intercept(1)
+        {
+            graphCDI = new Graph(0)
+            graphList[1].append(graphCDI)
+            graphCDI.size(0,2500,0,1)
+            graphCDI.view(0,0,2500,1,50,480,350,180)
+            graphCDI.addvar("dendrite_ref.o(0).sec.h_TRPC1(0.5)",7,1,0.8,0.9,2)
+            graphCDI.label(0.5,0.95,"CDI gate h (1=open)",2,1,0,1,1)
+        }
+        vBoxGraphCDI.intercept(0)
+        vBoxGraphCDI.map("CDI State",50,480,350,180)
+
+        vBoxGraphCldn5 = new VBox()
+        vBoxGraphCldn5.intercept(1)
+        {
+            graphCldn5 = new Graph(0)
+            graphList[1].append(graphCldn5)
+            graphCldn5.size(0,2500,0,1)
+            graphCldn5.view(0,0,2500,1,410,480,350,180)
+            graphCldn5.addvar("dendrite_ref.o(0).sec.er_TRPC1(0.5)",6,1,0.8,0.9,2)
+            graphCldn5.label(0.5,0.95,"ER Ca (proxy: Cldn5)",2,1,0,1,1)
+        }
+        vBoxGraphCldn5.intercept(0)
+        vBoxGraphCldn5.map("ER Ca (Cldn5 proxy)",410,480,350,180)
+
+        vBoxGraphICAM1 = new VBox()
+        vBoxGraphICAM1.intercept(1)
+        {
+            graphICAM1 = new Graph(0)
+            graphList[1].append(graphICAM1)
+            graphICAM1.size(0,2500,0,1)
+            graphICAM1.view(0,0,2500,1,770,480,350,180)
+            graphICAM1.addvar("dendrite_ref.o(0).sec.stim1_TRPC1(0.5)",7,1,0.8,0.9,2)
+            graphICAM1.label(0.5,0.95,"STIM1 (proxy: ICAM1)",2,1,0,1,1)
+        }
+        vBoxGraphICAM1.intercept(0)
+        vBoxGraphICAM1.map("STIM1 (ICAM1 proxy)",770,480,350,180)
+
+        vBoxGraphCCL2 = new VBox()
+        vBoxGraphCCL2.intercept(1)
+        {
+            graphCCL2 = new Graph(0)
+            graphList[1].append(graphCCL2)
+            graphCCL2.size(0,2500,0,1)
+            graphCCL2.view(0,0,2500,1,1130,480,350,180)
+            graphCCL2.addvar("dendrite_ref.o(0).sec.m_TRPC1(0.5)",8,1,0.8,0.9,2)
+            graphCCL2.label(0.5,0.95,"Open prob m (proxy: CCL2)",2,1,0,1,1)
+        }
+        vBoxGraphCCL2.intercept(0)
+        vBoxGraphCCL2.map("Open prob m (CCL2 proxy)",1130,480,350,180)
+
+        // ROW 4: Ionic currents
+        vBoxGraphIca = new VBox()
+        vBoxGraphIca.intercept(1)
+        {
+            graphIca = new Graph(0)
+            graphList[1].append(graphIca)
+            graphIca.size(0,2500,-0.1,0.001)
+            graphIca.view(0,-0.1,2500,0.101,50,670,350,180)
+            graphIca.addvar("dendrite_ref.o(0).sec.ica(0.5)",1,1,0.8,0.9,2)
+            graphIca.label(0.5,0.95,"ica (mA/cm2)",2,1,0,1,1)
+        }
+        vBoxGraphIca.intercept(0)
+        vBoxGraphIca.map("Calcium Current",50,670,350,180)
+
+        vBoxGraphIna = new VBox()
+        vBoxGraphIna.intercept(1)
+        {
+            graphIna = new Graph(0)
+            graphList[1].append(graphIna)
+            graphIna.size(0,2500,-0.04,0.001)
+            graphIna.view(0,-0.04,2500,0.041,410,670,350,180)
+            graphIna.addvar("dendrite_ref.o(0).sec.ina(0.5)",2,1,0.8,0.9,2)
+            graphIna.label(0.5,0.95,"ina (mA/cm2)",2,1,0,1,1)
+        }
+        vBoxGraphIna.intercept(0)
+        vBoxGraphIna.map("Sodium Current",410,670,350,180)
+
+        vBoxGraphIk = new VBox()
+        vBoxGraphIk.intercept(1)
+        {
+            graphIk = new Graph(0)
+            graphList[1].append(graphIk)
+            graphIk.size(0,2500,-0.005,0.0001)
+            graphIk.view(0,-0.005,2500,0.0051,770,670,350,180)
+            graphIk.addvar("dendrite_ref.o(0).sec.ik(0.5)",3,1,0.8,0.9,2)
+            graphIk.label(0.5,0.95,"ik (mA/cm2)",2,1,0,1,1)
+        }
+        vBoxGraphIk.intercept(0)
+        vBoxGraphIk.map("Potassium Current",770,670,350,180)
+
+        vBoxGraphItrpc1 = new VBox()
+        vBoxGraphItrpc1.intercept(1)
+        {
+            graphItrpc1 = new Graph(0)
+            graphList[1].append(graphItrpc1)
+            graphItrpc1.size(0,2500,-0.15,0.001)
+            graphItrpc1.view(0,-0.15,2500,0.151,1130,670,350,180)
+            graphItrpc1.addvar("dendrite_ref.o(0).sec.itotal_TRPC1(0.5)",4,1,0.8,0.9,2)
+            graphItrpc1.label(0.5,0.95,"itotal TRPC1 (mA/cm2)",2,1,0,1,1)
+        }
+        vBoxGraphItrpc1.intercept(0)
+        vBoxGraphItrpc1.map("Total TRPC1 Current",1130,670,350,180)
+
+        // PlotShape panels
+        vBoxPlotShapeTNFa = new VBox()
+        vBoxPlotShapeTNFa.intercept(1)
+        {
+            plotShapeTNFa = new PlotShape(0)
+            fast_flush_list.append(plotShapeTNFa)
+            plotShapeTNFa.size(-50,50,-50,50)
+            plotShapeTNFa.view(-50,-50,100,100,50,860,280,280)
+            plotShapeTNFa.exec_menu("Shape Plot")
+            plotShapeTNFa.exec_menu("View = plot")
+            plotShapeTNFa.variable("tnfa_TRPC1")
+            plotShapeTNFa.label(0.3,0.05,"TNFa (pg/ml)",2,1,0,1,1)
+            plotShapeTNFa.show(0)
+            plotShapeTNFa.scale(0,12)
+        }
+        vBoxPlotShapeTNFa.intercept(0)
+        vBoxPlotShapeTNFa.map("TNFa Distribution",50,860,280,280)
+
+        vBoxPlotShapeTRPC1 = new VBox()
+        vBoxPlotShapeTRPC1.intercept(1)
+        {
+            plotShapeTRPC1 = new PlotShape(0)
+            fast_flush_list.append(plotShapeTRPC1)
+            plotShapeTRPC1.size(-50,50,-50,50)
+            plotShapeTRPC1.view(-50,-50,100,100,340,860,280,280)
+            plotShapeTRPC1.exec_menu("Shape Plot")
+            plotShapeTRPC1.exec_menu("View = plot")
+            plotShapeTRPC1.variable("m_TRPC1")
+            plotShapeTRPC1.label(0.2,0.05,"Open Prob (m)",2,1,0,1,1)
+            plotShapeTRPC1.show(0)
+            plotShapeTRPC1.scale(0,1)
+        }
+        vBoxPlotShapeTRPC1.intercept(0)
+        vBoxPlotShapeTRPC1.map("TRPC1 SOCE Activity",340,860,280,280)
+
+        vBoxPlotShapeVoltage = new VBox()
+        vBoxPlotShapeVoltage.intercept(1)
+        {
+            plotShapeVoltage = new PlotShape(0)
+            fast_flush_list.append(plotShapeVoltage)
+            plotShapeVoltage.size(-50,50,-50,50)
+            plotShapeVoltage.view(-50,-50,100,100,630,860,280,280)
+            plotShapeVoltage.exec_menu("Shape Plot")
+            plotShapeVoltage.exec_menu("View = plot")
+            plotShapeVoltage.variable("v")
+            plotShapeVoltage.label(0.2,0.05,"Voltage (mV)",2,1,0,1,1)
+            plotShapeVoltage.show(0)
+            plotShapeVoltage.scale(-85,-50)
+        }
+        vBoxPlotShapeVoltage.intercept(0)
+        vBoxPlotShapeVoltage.map("Membrane Voltage",630,860,280,280)
+
+        vBoxPlotShapeIca = new VBox()
+        vBoxPlotShapeIca.intercept(1)
+        {
+            plotShapeIca = new PlotShape(0)
+            fast_flush_list.append(plotShapeIca)
+            plotShapeIca.size(-50,50,-50,50)
+            plotShapeIca.view(-50,-50,100,100,920,860,280,280)
+            plotShapeIca.exec_menu("Shape Plot")
+            plotShapeIca.exec_menu("View = plot")
+            plotShapeIca.variable("ica")
+            plotShapeIca.label(0.2,0.05,"ica (mA/cm2)",2,1,0,1,1)
+            plotShapeIca.show(0)
+            plotShapeIca.scale(-0.1,0)
+        }
+        vBoxPlotShapeIca.intercept(0)
+        vBoxPlotShapeIca.map("Calcium Current",920,860,280,280)
+
+        vBoxPlotShapeIna = new VBox()
+        vBoxPlotShapeIna.intercept(1)
+        {
+            plotShapeIna = new PlotShape(0)
+            fast_flush_list.append(plotShapeIna)
+            plotShapeIna.size(-50,50,-50,50)
+            plotShapeIna.view(-50,-50,100,100,1210,860,280,280)
+            plotShapeIna.exec_menu("Shape Plot")
+            plotShapeIna.exec_menu("View = plot")
+            plotShapeIna.variable("ina")
+            plotShapeIna.label(0.2,0.05,"ina (mA/cm2)",2,1,0,1,1)
+            plotShapeIna.show(0)
+            plotShapeIna.scale(-0.04,0)
+        }
+        vBoxPlotShapeIna.intercept(0)
+        vBoxPlotShapeIna.map("Sodium Current",1210,860,280,280)
+
+        vBoxPlotShapeIk = new VBox()
+        vBoxPlotShapeIk.intercept(1)
+        {
+            plotShapeIk = new PlotShape(0)
+            fast_flush_list.append(plotShapeIk)
+            plotShapeIk.size(-50,50,-50,50)
+            plotShapeIk.view(-50,-50,100,100,50,1150,280,280)
+            plotShapeIk.exec_menu("Shape Plot")
+            plotShapeIk.exec_menu("View = plot")
+            plotShapeIk.variable("ik")
+            plotShapeIk.label(0.2,0.05,"ik (mA/cm2)",2,1,0,1,1)
+            plotShapeIk.show(0)
+            plotShapeIk.scale(-0.005,0)
+        }
+        vBoxPlotShapeIk.intercept(0)
+        vBoxPlotShapeIk.map("Potassium Current",50,1150,280,280)
+
+        vBoxPlotShapeItrpc1 = new VBox()
+        vBoxPlotShapeItrpc1.intercept(1)
+        {
+            plotShapeItrpc1 = new PlotShape(0)
+            fast_flush_list.append(plotShapeItrpc1)
+            plotShapeItrpc1.size(-50,50,-50,50)
+            plotShapeItrpc1.view(-50,-50,100,100,340,1150,280,280)
+            plotShapeItrpc1.exec_menu("Shape Plot")
+            plotShapeItrpc1.exec_menu("View = plot")
+            plotShapeItrpc1.variable("itotal_TRPC1")
+            plotShapeItrpc1.label(0.2,0.05,"itrpc1 (mA/cm2)",2,1,0,1,1)
+            plotShapeItrpc1.show(0)
+            plotShapeItrpc1.scale(-0.15,0)
+        }
+        vBoxPlotShapeItrpc1.intercept(0)
+        vBoxPlotShapeItrpc1.map("Total TRPC1 Current",340,1150,280,280)
+
+        vBoxPlotShapeOpenProb = new VBox()
+        vBoxPlotShapeOpenProb.intercept(1)
+        {
+            plotShapeOpenProb = new PlotShape(0)
+            fast_flush_list.append(plotShapeOpenProb)
+            plotShapeOpenProb.size(-50,50,-50,50)
+            plotShapeOpenProb.view(-50,-50,100,100,630,1150,280,280)
+            plotShapeOpenProb.exec_menu("Shape Plot")
+            plotShapeOpenProb.exec_menu("View = plot")
+            plotShapeOpenProb.variable("m_TRPC1")
+            plotShapeOpenProb.label(0.2,0.05,"Open Prob",2,1,0,1,1)
+            plotShapeOpenProb.show(0)
+            plotShapeOpenProb.scale(0,1)
+        }
+        vBoxPlotShapeOpenProb.intercept(0)
+        vBoxPlotShapeOpenProb.map("Open Probability",630,1150,280,280)
+    }
+
+endtemplate SimTRPC1
+
+
+// ==============================================================================
+// TRPC1Iteration — updates tnfa_TRPC1 every timestep (section midpoint)
+// ==============================================================================
+proc TRPC1Iteration() { local tau1, tau2, BaselineTNFa, \
+                             dist_sq1, dist_sq2, z_diff, tnfa_profile, \
+                             xc, yc, zc
+    tau1         = $5
+    tau2         = $8
+    BaselineTNFa = 0.1
+
+    forall {
+        if (ismembrane("TRPC1")) {
+            xc=0  yc=0  zc=0
+            if (n3d() > 0) {
+                xc = (x3d(0) + x3d(n3d()-1)) / 2
+                yc = (y3d(0) + y3d(n3d()-1)) / 2
+                zc = (z3d(0) + z3d(n3d()-1)) / 2
+            }
+            dist_sq1 = dist2D_PtToPt_squared_trpc1($1,    $2, xc, yc)
+            dist_sq2 = dist2D_PtToPt_squared_trpc1($1+$7, $2, xc, yc)
+            z_diff   = abs($9 - zc)
+
+            if (((dist_sq1<$3*$3)||(dist_sq2<$3*$3)) && (z_diff<15) && (t>$4)) {
+                if (tau2 != tau1) {
+                    tnfa_profile = BaselineTNFa \
+                        + $6*(tau2/(tau2-tau1))*(exp(-(t-$4)/tau2)-exp(-(t-$4)/tau1))
+                } else {
+                    tnfa_profile = BaselineTNFa + $6*((t-$4)/tau1)*exp(1-(t-$4)/tau1)
+                }
+                if (tnfa_profile < 0) { tnfa_profile = BaselineTNFa }
+                if (dist_sq1 < $3*$3) {
+                    tnfa_profile = tnfa_profile*(1 - sqrt(dist_sq1)/($3*1.5))
+                }
+                tnfa_TRPC1 = tnfa_profile
+            } else {
+                tnfa_TRPC1 = BaselineTNFa
+            }
+        }
+    }
+}
