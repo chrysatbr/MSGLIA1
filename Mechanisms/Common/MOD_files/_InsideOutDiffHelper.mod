@@ -52,6 +52,7 @@ NEURON {
     USEION ach READ iach WRITE acho VALENCE 1
     USEION glu READ iglu WRITE gluo
     USEION gaba READ igaba WRITE gabao VALENCE 0
+    USEION atp READ iatp WRITE atpo VALENCE -4
     : Specific
     USEION frapion READ ifrapion WRITE frapiono
     USEION ip3 READ iip3 WRITE ip3o
@@ -106,6 +107,8 @@ ASSIGNED {
     iach (mA/cm2)       acho (mM)
     iglu (mA/cm2)       gluo (mM)
     igaba (mA/cm2)      gabao (mM)
+    : Neurotransmitters (cont.)
+    iatp (mA/cm2)       atpo (mM)
     : Specific
     ifrapion (mA/cm2)   frapiono (mM)
     iip3 (mA/cm2)       ip3o (mM)
@@ -123,7 +126,7 @@ STATE {
 : !! compiler warning here: VERBATIM blocks are not thread safe
 VERBATIM
     // vvvvvvvvvv Edit here when changing the species list vvvvvvvvvv
-    #define NUM_SPECIES_IN_MOD 11
+    #define NUM_SPECIES_IN_MOD 12
     // ^^^^^^^^^^ Edit here when changing the species list ^^^^^^^^^^
     
     static double *ptr_vec_i[NUM_SPECIES_IN_MOD];
@@ -210,6 +213,7 @@ KINETIC conc {
     acho = acho
     gluo = gluo
     gabao = gabao
+    atpo = atpo
     : Specific
     frapiono = frapiono
     ip3o = ip3o
@@ -240,12 +244,13 @@ PROCEDURE assignPointers() {
         ptr_vec_i[4] = &iach;       ptr_vec_o[4] = &acho;
         ptr_vec_i[5] = &iglu;       ptr_vec_o[5] = &gluo;
         ptr_vec_i[6] = &igaba;      ptr_vec_o[6] = &gabao;
+        ptr_vec_i[7] = &iatp;       ptr_vec_o[7] = &atpo;
         // Specific
-        ptr_vec_i[7] = &ifrapion;   ptr_vec_o[7] = &frapiono;
-        ptr_vec_i[8] = &iip3;       ptr_vec_o[8] = &ip3o;
+        ptr_vec_i[8] = &ifrapion;   ptr_vec_o[8] = &frapiono;
+        ptr_vec_i[9] = &iip3;       ptr_vec_o[9] = &ip3o;
         // User-defined
-        ptr_vec_i[9] = &iextra1;    ptr_vec_o[9] = &extra1o;
-        ptr_vec_i[10] = &iextra2;   ptr_vec_o[10] = &extra2o;
+        ptr_vec_i[10] = &iextra1;    ptr_vec_o[10] = &extra1o;
+        ptr_vec_i[11] = &iextra2;    ptr_vec_o[11] = &extra2o;
         // ^^^^^^^^^^ Edit here when changing the species list ^^^^^^^^^^
         
         /* !!

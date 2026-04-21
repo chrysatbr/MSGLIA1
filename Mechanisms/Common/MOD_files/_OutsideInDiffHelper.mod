@@ -38,6 +38,7 @@ NEURON {
     USEION ach WRITE acho
     USEION glu WRITE gluo
     USEION gaba WRITE gabao
+    USEION atp WRITE atpo VALENCE -4
     : Specific
     USEION frapion WRITE frapiono
     USEION ip3 WRITE ip3o
@@ -52,7 +53,7 @@ NEURON {
     : Basic ions
     GLOBAL naoinit, koinit, caoinit, cloinit
     : Neurotransmitters
-    GLOBAL achoinit, gluoinit, gabaoinit
+    GLOBAL achoinit, gluoinit, gabaoinit, atpoinit
     : Specific
     GLOBAL frapionoinit, ip3oinit
     : User-defined
@@ -107,6 +108,7 @@ PARAMETER {
     achoinit = -1 (mM)      :   ach_ion\GLOBAL\acho0_ach_ion
     gluoinit = -1 (mM)      :   glu_ion\GLOBAL\gluo0_glu_ion
     gabaoinit = -1 (mM)     :   gaba_ion\GLOBAL\gabao0_gaba_ion
+    atpoinit = -1 (mM)      :   atp_ion\GLOBAL\atpo0_atp_ion
     : Specific
     frapionoinit = -1 (mM)  :   frapion_ion\GLOBAL\frapiono0_frapion_ion
     ip3oinit = -1 (mM)      :   ip3_ion\GLOBAL\ip3o0_ip3_ion
@@ -139,6 +141,8 @@ ASSIGNED {
     acho (mM)
     gluo (mM)
     gabao (mM)
+    : Neurotransmitters (cont.)
+    atpo (mM)
     : Specific
     frapiono (mM)
     ip3o (mM)
@@ -151,7 +155,7 @@ ASSIGNED {
 : !! compiler warning here: VERBATIM blocks are not thread safe
 VERBATIM
     // vvvvvvvvvv Edit here when changing the species list vvvvvvvvvv
-    #define NUM_SPECIES_IN_MOD 11
+    #define NUM_SPECIES_IN_MOD 12
     // ^^^^^^^^^^ Edit here when changing the species list ^^^^^^^^^^
     
     struct SpeciesInfo {
@@ -287,12 +291,13 @@ PROCEDURE assignPointers() {
         ptr_vec_o[4] = &acho;
         ptr_vec_o[5] = &gluo;
         ptr_vec_o[6] = &gabao;
+        ptr_vec_o[7] = &atpo;
         // Specific
-        ptr_vec_o[7] = &frapiono;
-        ptr_vec_o[8] = &ip3o;
+        ptr_vec_o[8] = &frapiono;
+        ptr_vec_o[9] = &ip3o;
         // User-defined
-        ptr_vec_o[9] = &extra1o;
-        ptr_vec_o[10] = &extra2o;
+        ptr_vec_o[10] = &extra1o;
+        ptr_vec_o[11] = &extra2o;
         // ^^^^^^^^^^ Edit here when changing the species list ^^^^^^^^^^
         
         
@@ -357,12 +362,13 @@ PROCEDURE calcAllOutConcs() {
         *ptr_vec_o[4] = achoinit;
         *ptr_vec_o[5] = gluoinit;
         *ptr_vec_o[6] = gabaoinit;
+        *ptr_vec_o[7] = atpoinit;
         // Specific
-        *ptr_vec_o[7] = frapionoinit;
-        *ptr_vec_o[8] = ip3oinit;
+        *ptr_vec_o[8] = frapionoinit;
+        *ptr_vec_o[9] = ip3oinit;
         // User-defined
-        *ptr_vec_o[9] = extra1oinit;
-        *ptr_vec_o[10] = extra2oinit;
+        *ptr_vec_o[10] = extra1oinit;
+        *ptr_vec_o[11] = extra2oinit;
         // ^^^^^^^^^^ Edit here when changing the species list ^^^^^^^^^^
         
         for (int ecsIdx = 0; ecsIdx < (int)ptr_ecSrcLib->numECSs; ecsIdx++) {
