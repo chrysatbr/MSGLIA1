@@ -211,5 +211,6 @@ If you use MS-GLIA in published work, please cite:
 ---
 
 ## **Contact**
-
+chrysoula.tsimperi01@estudiant.upf.edu
+leonid.savtchenko@ucl.ac.uk
 
