@@ -194,7 +194,10 @@ This makes it easy for BrainCell users to transition.
 If you use MS-GLIA in published work, please cite:
 
 1. **BrainCell original publication**
-   (Savtchenko et al., Nature Communications 2018)
+   
+   ```
+   Savtchenko, L.P., Aleksin, S.G., Tsimperi, C. et al. BRAINCELL modelling platform for stochastic nanoscale organisation and dynamic extracellular signalling among neurons and glia. Nat Commun 17, 10808 (2026). https://doi.org/10.1038/s41467-026-77525-w
+   ```
 
 2. **MS-GLIA GitHub repository**
 
@@ -203,7 +206,7 @@ If you use MS-GLIA in published work, please cite:
    GitHub repository: https://github.com/chrysatbr/msglia1
    ```
 
-(Add a DOI when you publish a release.)
+
 
 ---
 
